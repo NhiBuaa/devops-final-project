@@ -23,6 +23,20 @@ resource "aws_security_group" "final_devops_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    from_port   = 6443
+    to_port     = 6443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -33,12 +47,20 @@ resource "aws_security_group" "final_devops_sg" {
 
 resource "aws_instance" "final_devops_server" {
   ami           = "ami-02dd44faa40720bb8"
-  instance_type = "t2.micro"
+  instance_type = "t2.medium"
   key_name      = var.ssh_ec2
 
   vpc_security_group_ids = [aws_security_group.final_devops_sg.id]
 
   tags = {
     Name = "Final-Devops"
+  }
+}
+
+resource "aws_eip" "final_devops_eip" {
+  instance = aws_instance.final_devops_server.id
+  domain   = "vpc"
+  tags = {
+    Name = "final-devops-static-ip"
   }
 }
