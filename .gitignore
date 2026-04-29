@@ -1,0 +1,42 @@
+# --- [SENSITIVE FILES - NEVER COMMIT] ---
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+kubeconfig
+inventory.ini
+
+# --- [TERRAFORM] ---
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+
+# --- [ANSIBLE] ---
+*.retry
+ansible_debug.log
+
+# --- [KUBERNETES YAML SECRETS] ---
+# Chỉ commit các file secret có giá trị placeholder (CHANGE_ME)
+# Nếu bạn tạo file secret riêng chứa pass thật, hãy liệt kê ở đây:
+# phase2-k8s/backend/secret-real.yaml
+
+# --- [NODE.js / FRONTEND / BACKEND] ---
+node_modules/
+dist/
+build/
+.npm
+.eslintcache
+npm-debug.log*
+
+# --- [OS / IDE] ---
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.bak
