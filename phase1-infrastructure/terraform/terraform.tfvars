@@ -1,1 +1,1 @@
-ssh_ec2 = "final_devops_key"
+ssh_ec2 = "devops-final"
