@@ -50,6 +50,16 @@ resource "aws_instance" "final_devops_server" {
   instance_type = "t2.medium"
   key_name      = var.ssh_ec2
 
+  user_data = <<-EOF
+              #!/bin/bash
+              mkdir -p /home/ubuntu/.ssh
+              %{ for key in var.member_public_keys ~}
+              echo "${key}" >> /home/ubuntu/.ssh/authorized_keys
+              %{ endfor ~}
+              chown ubuntu:ubuntu /home/ubuntu/.ssh/authorized_keys
+              chmod 600 /home/ubuntu/.ssh/authorized_keys
+              EOF
+
   vpc_security_group_ids = [aws_security_group.final_devops_sg.id]
 
   tags = {

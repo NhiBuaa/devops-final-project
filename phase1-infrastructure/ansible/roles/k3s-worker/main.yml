@@ -1,0 +1,67 @@
+---
+# =============================================================================
+# Role: k3s-worker - Join K3s cluster với tư cách Worker Node
+# Idempotent: Kiểm tra xem node đã join chưa trước khi thực hiện
+# =============================================================================
+
+- name: "[K3S-WORKER] Check if K3s agent is already installed"
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+  register: k3s_worker_binary
+  tags: [k3s, worker]
+
+- name: "[K3S-WORKER] Check if node is already joined to cluster"
+  ansible.builtin.stat:
+    path: /var/lib/rancher/k3s/agent/etc/k3s.env
+  register: k3s_agent_config
+  tags: [k3s, worker]
+
+- name: "[K3S-WORKER] Get master node token from master"
+  ansible.builtin.set_fact:
+    k3s_node_token: "{{ hostvars[groups['k3s_master'][0]]['k3s_node_token'] }}"
+    k3s_master_ip: "{{ hostvars[groups['k3s_master'][0]]['ansible_host'] }}"
+  tags: [k3s, worker]
+
+- name: "[K3S-WORKER] Download K3s installer script"
+  ansible.builtin.get_url:
+    url: https://get.k3s.io
+    dest: /tmp/k3s-install.sh
+    mode: '0755'
+    force: yes
+  tags: [k3s, worker]
+
+- name: "[K3S-WORKER] Install K3s agent and join cluster"
+  ansible.builtin.command: /tmp/k3s-install.sh
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    INSTALL_K3S_EXEC: "agent"
+    K3S_URL: "https://{{ k3s_master_ip }}:6443"
+    K3S_TOKEN: "{{ k3s_node_token }}"
+    K3S_NODE_NAME: "{{ inventory_hostname }}"
+  when: not k3s_agent_config.stat.exists
+  register: k3s_agent_install
+  tags: [k3s, worker]
+
+- name: "[K3S-WORKER] Ensure K3s agent service is started and enabled"
+  ansible.builtin.systemd:
+    name: k3s-agent
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  tags: [k3s, worker]
+
+- name: "[K3S-WORKER] Wait for worker node to be visible on master"
+  ansible.builtin.command: >
+    k3s kubectl get node {{ inventory_hostname }} --no-headers
+  delegate_to: "{{ groups['k3s_master'][0] }}"
+  register: worker_node_status
+  until: "'Ready' in worker_node_status.stdout"
+  retries: 20
+  delay: 10
+  changed_when: false
+  tags: [k3s, worker]
+
+- name: "[K3S-WORKER] Show worker node status"
+  ansible.builtin.debug:
+    msg: "Worker node {{ inventory_hostname }} status: {{ worker_node_status.stdout }}"
+  tags: [k3s, worker]

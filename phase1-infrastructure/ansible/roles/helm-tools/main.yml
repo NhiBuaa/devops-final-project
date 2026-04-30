@@ -1,0 +1,260 @@
+---
+# =============================================================================
+# Role: helm-tools - Cài Helm + cert-manager trên Master node
+# Idempotent: Kiểm tra version hiện tại trước khi install/upgrade
+# =============================================================================
+
+# --- INSTALL HELM ---
+
+- name: "[HELM] Check if Helm is already installed"
+  ansible.builtin.stat:
+    path: /usr/local/bin/helm
+  register: helm_binary
+  tags: [helm, tools]
+
+- name: "[HELM] Check current Helm version"
+  ansible.builtin.command: helm version --short
+  register: helm_current_version
+  changed_when: false
+  failed_when: false
+  when: helm_binary.stat.exists
+  tags: [helm, tools]
+
+- name: "[HELM] Download Helm installer"
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    dest: /tmp/get-helm-3.sh
+    mode: '0755'
+    force: yes
+  when: >
+    not helm_binary.stat.exists or
+    (helm_current_version.stdout is defined and helm_version not in helm_current_version.stdout)
+  tags: [helm, tools]
+
+- name: "[HELM] Install Helm {{ helm_version }}"
+  ansible.builtin.command: /tmp/get-helm-3.sh
+  environment:
+    DESIRED_VERSION: "{{ helm_version }}"
+  when: >
+    not helm_binary.stat.exists or
+    (helm_current_version.stdout is defined and helm_version not in helm_current_version.stdout)
+  tags: [helm, tools]
+
+- name: "[HELM] Verify Helm installation"
+  ansible.builtin.command: helm version --short
+  register: helm_verify
+  changed_when: false
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+  tags: [helm, tools]
+
+- name: "[HELM] Show installed Helm version"
+  ansible.builtin.debug:
+    msg: "Helm installed: {{ helm_verify.stdout }}"
+  tags: [helm, tools]
+
+# --- ADD HELM REPOSITORIES ---
+
+- name: "[HELM] Add Jetstack Helm repository (for cert-manager)"
+  kubernetes.core.helm_repository:
+    name: jetstack
+    repo_url: https://charts.jetstack.io
+    state: present
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+  tags: [helm, cert-manager]
+
+- name: "[HELM] Add ingress-nginx Helm repository"
+  kubernetes.core.helm_repository:
+    name: ingress-nginx
+    repo_url: https://kubernetes.github.io/ingress-nginx
+    state: present
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+  tags: [helm, ingress]
+
+- name: "[HELM] Add Prometheus community Helm repository"
+  kubernetes.core.helm_repository:
+    name: prometheus-community
+    repo_url: https://prometheus-community.github.io/helm-charts
+    state: present
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+  tags: [helm, monitoring]
+
+- name: "[HELM] Update Helm repositories"
+  ansible.builtin.command: helm repo update
+  changed_when: false
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+  tags: [helm]
+
+# --- INSTALL INGRESS-NGINX ---
+
+- name: "[INGRESS] Create ingress-nginx namespace"
+  kubernetes.core.k8s:
+    name: ingress-nginx
+    api_version: v1
+    kind: Namespace
+    state: present
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+  tags: [helm, ingress]
+
+- name: "[INGRESS] Install ingress-nginx via Helm"
+  kubernetes.core.helm:
+    name: ingress-nginx
+    chart_ref: ingress-nginx/ingress-nginx
+    release_namespace: ingress-nginx
+    create_namespace: true
+    state: present
+    values:
+      controller:
+        hostNetwork: true
+        hostPort:
+          enabled: true
+        kind: DaemonSet
+        service:
+          type: NodePort
+        admissionWebhooks:
+          enabled: false
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+  tags: [helm, ingress]
+
+- name: "[INGRESS] Wait for ingress-nginx to be ready"
+  ansible.builtin.command: >
+    kubectl wait --namespace ingress-nginx
+    --for=condition=ready pod
+    --selector=app.kubernetes.io/component=controller
+    --timeout=120s
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+  changed_when: false
+  tags: [helm, ingress]
+
+# --- INSTALL CERT-MANAGER ---
+
+- name: "[CERT-MANAGER] Create cert-manager namespace"
+  kubernetes.core.k8s:
+    name: cert-manager
+    api_version: v1
+    kind: Namespace
+    state: present
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+  tags: [helm, cert-manager]
+
+- name: "[CERT-MANAGER] Install cert-manager {{ cert_manager_version }} via Helm"
+  kubernetes.core.helm:
+    name: cert-manager
+    chart_ref: jetstack/cert-manager
+    chart_version: "{{ cert_manager_version }}"
+    release_namespace: cert-manager
+    create_namespace: true
+    state: present
+    values:
+      installCRDs: true
+      prometheus:
+        enabled: true
+        servicemonitor:
+          enabled: true
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+  tags: [helm, cert-manager]
+
+- name: "[CERT-MANAGER] Wait for cert-manager pods to be ready"
+  ansible.builtin.command: >
+    kubectl wait --namespace cert-manager
+    --for=condition=ready pod
+    --selector=app.kubernetes.io/instance=cert-manager
+    --timeout=120s
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+  changed_when: false
+  tags: [helm, cert-manager]
+
+- name: "[CERT-MANAGER] Create ClusterIssuer for Let's Encrypt (Staging - test trước)"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: cert-manager.io/v1
+      kind: ClusterIssuer
+      metadata:
+        name: letsencrypt-staging
+      spec:
+        acme:
+          server: https://acme-staging-v02.api.letsencrypt.org/directory
+          email: "{{ letsencrypt_email | default('admin@example.com') }}"
+          privateKeySecretRef:
+            name: letsencrypt-staging-key
+          solvers:
+            - http01:
+                ingress:
+                  class: nginx
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+  tags: [helm, cert-manager, letsencrypt]
+
+- name: "[CERT-MANAGER] Create ClusterIssuer for Let's Encrypt (Production)"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: cert-manager.io/v1
+      kind: ClusterIssuer
+      metadata:
+        name: letsencrypt-prod
+      spec:
+        acme:
+          server: https://acme-v02.api.letsencrypt.org/directory
+          email: "{{ letsencrypt_email | default('admin@example.com') }}"
+          privateKeySecretRef:
+            name: letsencrypt-prod-key
+          solvers:
+            - http01:
+                ingress:
+                  class: nginx
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+  tags: [helm, cert-manager, letsencrypt]
+
+- name: "[CERT-MANAGER] Verify cert-manager ClusterIssuers"
+  ansible.builtin.command: kubectl get clusterissuers -o wide
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+  register: clusterissuers
+  changed_when: false
+  tags: [helm, cert-manager]
+
+- name: "[CERT-MANAGER] Show ClusterIssuers status"
+  ansible.builtin.debug:
+    msg: "{{ clusterissuers.stdout_lines }}"
+  tags: [helm, cert-manager]
+
+# --- VERIFY EVERYTHING ---
+
+- name: "[VERIFY] Get all nodes in cluster"
+  ansible.builtin.command: kubectl get nodes -o wide
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+  register: all_nodes
+  changed_when: false
+  tags: [verify]
+
+- name: "[VERIFY] Show cluster nodes"
+  ansible.builtin.debug:
+    msg: "{{ all_nodes.stdout_lines }}"
+  tags: [verify]
+
+- name: "[VERIFY] Get all pods across all namespaces"
+  ansible.builtin.command: kubectl get pods --all-namespaces
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+  register: all_pods
+  changed_when: false
+  tags: [verify]
+
+- name: "[VERIFY] Show all pods"
+  ansible.builtin.debug:
+    msg: "{{ all_pods.stdout_lines }}"
+  tags: [verify]
