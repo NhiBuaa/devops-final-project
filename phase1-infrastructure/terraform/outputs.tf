@@ -1,14 +1,15 @@
-output "server_public_ip" {
-  description = "Public ip address to access server via SSH/Website"
-  value       = aws_instance.final_devops_server.public_ip
+output "final_devops_master_static_ip" {
+  value = aws_eip.final_devops_eip.public_ip
+  description = "The static IP address used to configure DNS for the Master"
 }
 
-output "server_public_dns" {
-  description = "Server's public DNS address"
-  value       = aws_instance.final_devops_server.public_dns
+output "all_server_public_ips" {
+  value = aws_instance.final_devops_server[*].public_ip
+  description = "List of public IPs of all nodes in the cluster"
 }
 
-output "final_devops_static_ip" {
-  description = "Server's static ip"
-  value       = aws_eip.final_devops_eip.public_ip
+output "all_server_public_dns" {
+  value = aws_instance.final_devops_server[*].public_dns
+
+  description = "List of Public DNS of all nodes"
 }

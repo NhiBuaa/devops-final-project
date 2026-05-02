@@ -1,0 +1,117 @@
+---
+# =============================================================================
+# Role: common - Cấu hình cơ bản cho tất cả nodes
+# Idempotent: Tất cả tasks có thể chạy nhiều lần mà không gây lỗi
+# =============================================================================
+
+- name: "[COMMON] Update apt cache"
+  ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: 3600  # Chỉ update nếu cache > 1 giờ (idempotent)
+  tags: [common, apt]
+
+- name: "[COMMON] Install required system packages"
+  ansible.builtin.apt:
+    name:
+      - curl
+      - wget
+      - git
+      - unzip
+      - apt-transport-https
+      - ca-certificates
+      - gnupg
+      - lsb-release
+      - ufw
+      - htop
+      - net-tools
+      - jq
+    state: present  # Idempotent: chỉ install nếu chưa có
+  tags: [common, packages]
+
+- name: "[COMMON] Set timezone to Asia/Ho_Chi_Minh"
+  community.general.timezone:
+    name: Asia/Ho_Chi_Minh
+  tags: [common, timezone]
+
+- name: "[COMMON] Disable swap (required for Kubernetes)"
+  ansible.builtin.command: swapoff -a
+  changed_when: false  # Luôn chạy nhưng không report changed
+  tags: [common, swap]
+
+- name: "[COMMON] Ensure swap is disabled in /etc/fstab"
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^([^#].*\s+swap\s+.*)$'
+    replace: '# \1'
+    backup: yes
+  tags: [common, swap]
+
+- name: "[COMMON] Load required kernel modules"
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - br_netfilter
+    - overlay
+  tags: [common, kernel]
+
+- name: "[COMMON] Ensure kernel modules persist across reboots"
+  ansible.builtin.lineinfile:
+    path: /etc/modules-load.d/k8s.conf
+    line: "{{ item }}"
+    create: yes
+    state: present
+  loop:
+    - br_netfilter
+    - overlay
+  tags: [common, kernel]
+
+- name: "[COMMON] Set kernel parameters for Kubernetes networking"
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+    sysctl_file: /etc/sysctl.d/k8s.conf
+  loop:
+    - { key: "net.bridge.bridge-nf-call-iptables", value: "1" }
+    - { key: "net.bridge.bridge-nf-call-ip6tables", value: "1" }
+    - { key: "net.ipv4.ip_forward", value: "1" }
+  tags: [common, kernel, sysctl]
+
+- name: "[COMMON] Configure UFW - allow internal VPC traffic"
+  community.general.ufw:
+    rule: allow
+    src: "{{ vpc_cidr }}"
+    comment: "Internal VPC - K3s cluster communication"
+  tags: [common, firewall, ufw]
+
+- name: "[COMMON] Configure UFW - allow specific external ports"
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    comment: "{{ item.comment }}"
+  loop: "{{ ufw_allowed_ports }}"
+  tags: [common, firewall, ufw]
+
+- name: "[COMMON] Enable UFW with default deny incoming"
+  community.general.ufw:
+    state: enabled
+    policy: deny
+    direction: incoming
+    logging: 'on'
+  tags: [common, firewall, ufw]
+
+- name: "[COMMON] Set hostname correctly"
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+  tags: [common, hostname]
+
+- name: "[COMMON] Update /etc/hosts with hostname"
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1'
+    line: "127.0.1.1 {{ inventory_hostname }}"
+    state: present
+  tags: [common, hostname]

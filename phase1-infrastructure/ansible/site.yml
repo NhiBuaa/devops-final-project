@@ -1,0 +1,106 @@
+---
+# =============================================================================
+# MAIN ANSIBLE PLAYBOOK - Production-Grade K3s CI/CD Infrastructure
+# Phase 1: Infrastructure Configuration
+#
+# Cách chạy:
+#   ansible-playbook -i inventory/hosts.ini site.yml
+#
+# Để chứng minh idempotency (chạy lần 2 sau khi đã deploy):
+#   ansible-playbook -i inventory/hosts.ini site.yml --diff
+# =============================================================================
+
+# Play 1: Cấu hình cơ bản cho TẤT CẢ nodes
+- name: "PLAY 1 - Common Configuration for All Nodes"
+  hosts: k3s_cluster
+  become: yes
+  gather_facts: yes
+  any_errors_fatal: false
+
+  roles:
+    - role: common
+      tags: [common]
+
+  post_tasks:
+    - name: "[POST] Confirm common setup complete on {{ inventory_hostname }}"
+      ansible.builtin.debug:
+        msg: "Common configuration complete on {{ inventory_hostname }} ({{ ansible_host }})"
+
+# Play 2: Cài đặt K3s Master (Control Plane)
+- name: "PLAY 2 - Install K3s Master (Control Plane)"
+  hosts: k3s_master
+  become: yes
+  gather_facts: yes
+
+  roles:
+    - role: k3s-master
+      tags: [k3s, master]
+
+  post_tasks:
+    - name: "[POST] K3s Master setup complete"
+      ansible.builtin.debug:
+        msg: "K3s Master node ready at https://{{ ansible_host }}:6443"
+
+# Play 3: Join Worker Nodes vào cluster
+- name: "PLAY 3 - Join K3s Worker Nodes to Cluster"
+  hosts: k3s_workers
+  become: yes
+  gather_facts: yes
+
+  roles:
+    - role: k3s-worker
+      tags: [k3s, worker]
+
+  post_tasks:
+    - name: "[POST] K3s Worker setup complete"
+      ansible.builtin.debug:
+        msg: "K3s Worker node {{ inventory_hostname }} joined cluster"
+
+# Play 4: Cài Helm, Ingress, cert-manager & Monitoring trên Master
+- name: "PLAY 4 - Install Kubernetes Tools & Monitoring on Master"
+  hosts: k3s_master
+  become: yes
+  gather_facts: yes
+
+  pre_tasks:
+    - name: "[PRE] Ensure python3-pip is installed"
+      ansible.builtin.apt:
+        name: python3-pip
+        state: present
+        update_cache: yes
+
+    - name: "[PRE] Install Python libraries for K8s modules"
+      ansible.builtin.pip:
+        name:
+          - kubernetes
+          - openshift
+        state: present
+        extra_args: --break-system-packages
+
+  roles:
+    - role: monitoring
+      tags: [prometheus, grafana]
+    - role: helm-tools
+      tags: [helm, cert-manager, ingress]
+
+  post_tasks:
+    - name: "[POST] Final cluster summary"
+      ansible.builtin.command: kubectl get nodes,pods --all-namespaces -o wide
+      environment:
+        KUBECONFIG: "/home/ubuntu/.kube/config"
+      register: final_summary
+      changed_when: false
+
+    - name: "[POST] Display final cluster state"
+      ansible.builtin.debug:
+        msg: |
+          ============================================================
+          PHASE 1 INFRASTRUCTURE SETUP COMPLETE!
+          ============================================================
+          {{ final_summary.stdout }}
+          ============================================================
+          TRẠNG THÁI HTTPS & MONITORING:
+            1. Ingress: Đã cài đặt (Nginx)
+            2. SSL: Cert-manager đã sẵn sàng cho {{ domain_name }}[cite: 2]
+            3. Monitoring: Prometheus (9090), Grafana (32000)[cite: 3]
+          ============================================================
