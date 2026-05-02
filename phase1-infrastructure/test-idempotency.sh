@@ -10,7 +10,7 @@ set -e
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOG_DIR="./idempotency-logs"
 LOG_FILE="${LOG_DIR}/idempotency_test_${TIMESTAMP}.log"
-INVENTORY="./ansible/inventory/hosts.ini"
+INVENTORY="inventory/hosts.ini"
 
 mkdir -p "$LOG_DIR"
 

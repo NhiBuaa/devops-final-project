@@ -3,6 +3,9 @@
 # Global Variables cho toàn bộ Ansible Playbook
 # =============================================================================
 
+letsencrypt_email: "nhihuynh210905@gmail.com" # Email để nhận thông báo từ Let's Encrypt
+domain_name: "nhibuaa.space"
+
 # K3s version (ghim version cụ thể để đảm bảo idempotency)
 k3s_version: "v1.29.4+k3s1"
 
@@ -32,7 +35,7 @@ ufw_allowed_ports:
   - { port: 8472, proto: udp, comment: "K3s Flannel VXLAN" }
   - { port: 10250, proto: tcp, comment: "Kubelet metrics" }
   - { port: 9090, proto: tcp, comment: "Prometheus" }
-  - { port: 3000, proto: tcp, comment: "Grafana" }
+  - { port: 32000, proto: tcp, comment: "Grafana" }
   - { port: "30000:32767", proto: tcp, comment: "NodePort range" }
 
 # Internal VPC CIDR - cho phép tất cả traffic nội bộ

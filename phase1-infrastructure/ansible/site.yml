@@ -56,24 +56,30 @@
       ansible.builtin.debug:
         msg: "K3s Worker node {{ inventory_hostname }} joined cluster"
 
-# Play 4: Cài Helm, Ingress, cert-manager trên Master
-- name: "PLAY 4 - Install Helm, Ingress-Nginx & cert-manager on Master"
+# Play 4: Cài Helm, Ingress, cert-manager & Monitoring trên Master
+- name: "PLAY 4 - Install Kubernetes Tools & Monitoring on Master"
   hosts: k3s_master
   become: yes
-  become_user: ubuntu
   gather_facts: yes
 
   pre_tasks:
-    - name: "[PRE] Install Python Kubernetes library (for k8s modules)"
+    - name: "[PRE] Ensure python3-pip is installed"
+      ansible.builtin.apt:
+        name: python3-pip
+        state: present
+        update_cache: yes
+
+    - name: "[PRE] Install Python libraries for K8s modules"
       ansible.builtin.pip:
         name:
           - kubernetes
           - openshift
         state: present
-      become: yes
-      become_user: root
+        extra_args: --break-system-packages
 
   roles:
+    - role: monitoring
+      tags: [prometheus, grafana]
     - role: helm-tools
       tags: [helm, cert-manager, ingress]
 
@@ -93,10 +99,8 @@
           ============================================================
           {{ final_summary.stdout }}
           ============================================================
-          Next Steps (Phase 2):
-            1. Configure your domain DNS → Master Public IP
-            2. Deploy your application via Helm/kubectl
-            3. Apply Ingress with cert-manager annotation:
-               kubernetes.io/ingress.class: nginx
-               cert-manager.io/cluster-issuer: letsencrypt-prod
+          TRẠNG THÁI HTTPS & MONITORING:
+            1. Ingress: Đã cài đặt (Nginx)
+            2. SSL: Cert-manager đã sẵn sàng cho {{ domain_name }}[cite: 2]
+            3. Monitoring: Prometheus (9090), Grafana (32000)[cite: 3]
           ============================================================

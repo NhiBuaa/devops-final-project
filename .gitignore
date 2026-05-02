@@ -1,0 +1,48 @@
+# ==========================================
+# TERRAFORM (Hạ tầng AWS)
+# ==========================================
+# Ignore thư mục cài đặt plugin và biến môi trường
+**/.terraform/
+**/*.tfvars
+**/*.tfvars.json
+
+# Ignore file trạng thái (CHỨA DỮ LIỆU NHẠY CẢM)
+**/*.tfstate
+**/*.tfstate.backup
+
+# Ignore file log và file kế hoạch tạm thời
+**/.terraform.lock.hcl
+**/tfplan
+
+# ==========================================
+# ANSIBLE (Cấu hình Server)
+# ==========================================
+# Ignore các file nhật ký chạy lệnh
+**/ansible.log
+**/ansible-run-*.log
+**/*.retry
+
+# Ignore kết quả script test tự động
+**/idempotency-logs/
+
+# ==========================================
+# KUBERNETES & SECRETS (Bảo mật)
+# ==========================================
+# Bắt buộc phải ignore file này (Quyền điều khiển Cluster)
+**/kubeconfig
+**/.kubeconfig_b64.txt
+
+# File thực thi phần mềm (Không push tool vào Git)
+**/kubectl
+
+# File chứng chỉ và khóa riêng tư
+**/*.pem
+**/*.key
+
+# ==========================================
+# HỆ ĐIỀU HÀNH & IDE (Rác hệ thống)
+# ==========================================
+.DS_Store
+.vscode/
+.idea/
+*.swp
