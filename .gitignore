@@ -18,8 +18,6 @@
 # ANSIBLE (Cấu hình Server)
 # ==========================================
 # Ignore các file nhật ký chạy lệnh
-**/ansible.log
-**/ansible-run-*.log
 **/*.retry
 
 # Ignore kết quả script test tự động
