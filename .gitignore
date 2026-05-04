@@ -57,4 +57,10 @@ report/
 report/
 node_modules/
 dist/
+<<<<<<< HEAD
 >>>>>>> 8edcc40 (feat: src code example)
+=======
+
+#-=========================================
+.env
+>>>>>>> 6881762 (remove env files)
