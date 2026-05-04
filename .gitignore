@@ -44,7 +44,9 @@
 .vscode/
 .idea/
 *.swp
-report/
+reportdist
 node_modules/
+dist/
 
-
+#-=========================================
+.env

@@ -1,0 +1,26 @@
+services:
+  backend-service:
+    image: thongchau/final-devops-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    networks:
+      - gym-network
+
+  frontend-service:
+    image: thongchau/final-devops-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend-service
+    networks:
+      - gym-network
+
+networks:
+  gym-network:
+    driver: bridge
