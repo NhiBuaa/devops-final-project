@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS members (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  role VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO members (name, role) VALUES ('Admin', 'DevOps Leader');

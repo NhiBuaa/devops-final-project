@@ -47,3 +47,7 @@ phase2-k8s/backend/secret.yaml
 *.swp
 report/
 node_modules/
+<<<<<<< HEAD
+=======
+dist/
+>>>>>>> 8edcc40 (feat: src code example)
