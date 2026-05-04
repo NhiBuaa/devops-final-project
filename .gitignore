@@ -44,5 +44,7 @@
 .vscode/
 .idea/
 *.swp
-node_modules/
 report/
+node_modules/
+
+
