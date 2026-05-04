@@ -1,4 +1,7 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 26285aa (feat: src code example)
 const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
@@ -88,6 +91,7 @@ process.on('SIGTERM', () => {
     server.close(() => {
         pool.end(() => console.log('Database pool closed'));
     });
+<<<<<<< HEAD
 =======
 const express = require('express');
 const { Pool } = require('pg');
@@ -179,4 +183,6 @@ process.on('SIGTERM', () => {
         pool.end(() => console.log('Database pool closed'));
     });
 >>>>>>> 8edcc40 (feat: src code example)
+=======
+>>>>>>> 26285aa (feat: src code example)
 });
