@@ -51,4 +51,10 @@ report/
 .vscode/
 .idea/
 *.swp
+<<<<<<< HEAD
 *.bak
+=======
+report/
+node_modules/
+dist/
+>>>>>>> 8edcc40 (feat: src code example)
