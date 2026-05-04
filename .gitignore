@@ -48,6 +48,13 @@ phase2-k8s/backend/secret.yaml
 report/
 node_modules/
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 dist/
 >>>>>>> 8edcc40 (feat: src code example)
+=======
+dist/
+
+#-=========================================
+.env
+>>>>>>> 6881762 (remove env files)
