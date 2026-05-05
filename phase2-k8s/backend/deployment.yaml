@@ -66,9 +66,9 @@ spec:
           # Đọc config từ ConfigMap
           envFrom:
             - configMapRef:
-                name: backend-config
+                name: postgres-config
 
-          # Đọc secrets từ Secret (chỉ các biến nhạy cảm)
+          # Đọc secrets từ Secrets
           env:
             - name: DB_USER
               valueFrom:
@@ -106,7 +106,7 @@ spec:
 
           readinessProbe:
             httpGet:
-              path: /health/ready
+              path: /health
               port: 8080
             initialDelaySeconds: 10
             periodSeconds: 10
