@@ -29,6 +29,7 @@
 # Bắt buộc phải ignore file này (Quyền điều khiển Cluster)
 **/kubeconfig
 **/.kubeconfig_b64.txt
+phase2-k8s/backend/secret.yaml
 
 # File thực thi phần mềm (Không push tool vào Git)
 **/kubectl
@@ -44,9 +45,10 @@
 .vscode/
 .idea/
 *.swp
-reportdist
+report/
 node_modules/
 dist/
 
 #-=========================================
 .env
+secret.yaml
