@@ -1,76 +1,73 @@
 #!/bin/bash
-# =============================================================================
-# PHASE 2 — Kubernetes Deploy Script
-# Chạy từ máy local với KUBECONFIG đã setup từ Phase 1
-# =============================================================================
-
 set -e
-KUBECONFIG_PATH="./kubeconfig"    # Hoặc ~/.kube/config
 
-echo "============================================================"
-echo "PHASE 2 — K8s Architecture Deploy"
-echo "============================================================"
+# --- Cấu hình ---
+# Sử dụng đường dẫn linh hoạt hoặc tuyệt đối
+KUBECONFIG_PATH="../phase1-infrastructure/ansible/kubeconfig"
+NS="production"
 
-# STEP 1: Tạo namespace
-echo "[1/7] Creating production namespace..."
-kubectl --kubeconfig=$KUBECONFIG_PATH apply -f namespace.yaml
+# Màu sắc cho terminal
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
 
-# STEP 2: Deploy secrets TRƯỚC (backend + database cần đọc secrets)
-echo "[2/7] Applying Secrets..."
-echo "Nhớ sửa giá trị CHANGE_ME trong các file secret trước!"
-kubectl --kubeconfig=$KUBECONFIG_PATH apply -f backend/secret.yaml
-kubectl --kubeconfig=$KUBECONFIG_PATH apply -f database/statefulset.yaml   # Secret ở trong file này
+echo -e "${YELLOW}============================================================${NC}"
+echo -e "${YELLOW}STARTING DEPLOYMENT PHASE 2 — K8S ARCHITECTURE${NC}"
+echo -e "${YELLOW}============================================================${NC}"
 
-# STEP 3: Apply ConfigMaps
-echo "[3/7] Applying ConfigMaps..."
-kubectl --kubeconfig=$KUBECONFIG_PATH apply -f frontend/configmap.yaml
-kubectl --kubeconfig=$KUBECONFIG_PATH apply -f backend/configmap.yaml
+# Kiểm tra file kubeconfig
+if [ ! -f "$KUBECONFIG_PATH" ]; then
+    echo -e "Lỗi: Không tìm thấy file kubeconfig tại $KUBECONFIG_PATH"
+    exit 1
+fi
 
-# STEP 4: Deploy Database (phải lên trước backend)
-echo "[4/7] Deploying PostgreSQL StatefulSet..."
-kubectl --kubeconfig=$KUBECONFIG_PATH apply -f database/statefulset.yaml
+k() {
+  kubectl --kubeconfig="$KUBECONFIG_PATH" "$@"
+}
 
-echo "Waiting for PostgreSQL to be ready..."
-kubectl --kubeconfig=$KUBECONFIG_PATH wait \
-  --namespace=production \
-  --for=condition=ready pod \
-  --selector=app=postgres \
-  --timeout=120s
+# STEP 1: Namespace
+echo -e "${GREEN}[1/7] Creating namespace...${NC}"
+k apply -f namespace.yaml
 
-# STEP 5: Deploy Backend
-echo "[5/7] Deploying Backend..."
-kubectl --kubeconfig=$KUBECONFIG_PATH apply -f backend/deployment.yaml
-kubectl --kubeconfig=$KUBECONFIG_PATH apply -f backend/hpa.yaml
+# STEP 2: Secrets & ConfigMaps
+echo -e "${GREEN}[2/7] Applying Secrets and ConfigMaps...${NC}"
+# Chỉ apply những gì cần thiết, tránh lặp lại file database
+k apply -f backend/secret.yaml -n $NS
+k apply -f backend/configmap.yaml -n $NS
+k apply -f frontend/configmap.yaml -n $NS
 
-kubectl --kubeconfig=$KUBECONFIG_PATH wait \
-  --namespace=production \
-  --for=condition=available deployment/backend \
-  --timeout=120s
+# STEP 3: Database (StatefulSet)
+echo -e "${GREEN}[3/7] Deploying PostgreSQL StatefulSet...${NC}"
+k apply -f database/statefulset.yaml -n $NS
 
-# STEP 6: Deploy Frontend
-echo "[6/7] Deploying Frontend..."
-kubectl --kubeconfig=$KUBECONFIG_PATH apply -f frontend/deployment.yaml
-kubectl --kubeconfig=$KUBECONFIG_PATH apply -f frontend/hpa.yaml
+echo "Waiting for PostgreSQL pod to be ready..."
+# Đợi chính xác pod postgres-0 (đặc trưng của StatefulSet)
+k wait --namespace=$NS --for=condition=ready pod/postgres-0 --timeout=120s
 
-kubectl --kubeconfig=$KUBECONFIG_PATH wait \
-  --namespace=production \
-  --for=condition=available deployment/frontend \
-  --timeout=120s
+# STEP 4: Backend
+echo -e "${GREEN}[4/7] Deploying Backend & HPA...${NC}"
+k apply -f backend/deployment.yaml -n $NS
+k apply -f backend/hpa.yaml -n $NS
 
-# STEP 7: Apply Ingress (TLS sẽ được cert-manager xử lý)
-echo "[7/7] Applying Ingress with TLS..."
-kubectl --kubeconfig=$KUBECONFIG_PATH apply -f ingress/ingress.yaml
+echo "Waiting for Backend deployment to be available..."
+k rollout status deployment/backend -n $NS --timeout=120s
 
-echo ""
-echo "============================================================"
-echo "DEPLOY COMPLETE! Verifying cluster state..."
-echo "============================================================"
+# STEP 5: Frontend
+echo -e "${GREEN}[5/7] Deploying Frontend & HPA...${NC}"
+k apply -f frontend/deployment.yaml -n $NS
+k apply -f frontend/hpa.yaml -n $NS
 
-kubectl --kubeconfig=$KUBECONFIG_PATH get all --namespace=production
-echo ""
-kubectl --kubeconfig=$KUBECONFIG_PATH get hpa --namespace=production
-echo ""
-kubectl --kubeconfig=$KUBECONFIG_PATH get ingress --namespace=production
-echo ""
-echo "TLS Certificate status (chờ 1-2 phút để cert-manager issue cert):"
-kubectl --kubeconfig=$KUBECONFIG_PATH get certificate --namespace=production
+echo "Waiting for Frontend deployment to be available..."
+k rollout status deployment/frontend -n $NS --timeout=120s
+
+# STEP 6: Ingress
+echo -e "${GREEN}[6/7] Applying Ingress (TLS)...${NC}"
+k apply -f ingress/ingress.yaml -n $NS
+
+echo -e "${YELLOW}============================================================${NC}"
+echo -e "${YELLOW}DEPLOY COMPLETE! VERIFYING...${NC}"
+echo -e "${YELLOW}============================================================${NC}"
+
+k get pods,svc,hpa,ingress -n $NS
+echo -e "\n${GREEN}Chờ 1-2 phút để cert-manager cấp phát SSL Certificate...${NC}"
+k get certificate -n $NS
