@@ -1,54 +1,70 @@
 # ==========================================
-# TERRAFORM (Hạ tầng AWS)
+# SENSITIVE FILES / ENV
 # ==========================================
-# Ignore thư mục cài đặt plugin và biến môi trường
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+inventory.ini
+kubeconfig
+.kubeconfig_b64.txt
+
+# ==========================================
+# TERRAFORM
+# ==========================================
 **/.terraform/
+**/.terraform.lock.hcl
+**/*.tfstate
+**/*.tfstate.*
 **/*.tfvars
 **/*.tfvars.json
-
-# Ignore file trạng thái (CHỨA DỮ LIỆU NHẠY CẢM)
-**/*.tfstate
-**/*.tfstate.backup
-
-# Ignore file log và file kế hoạch tạm thời
-**/.terraform.lock.hcl
 **/tfplan
+crash.log
+override.tf
+override.tf.json
 
 # ==========================================
-# ANSIBLE (Cấu hình Server)
+# ANSIBLE
 # ==========================================
-# Ignore các file nhật ký chạy lệnh
 **/*.retry
-
-# Ignore kết quả script test tự động
+ansible_debug.log
 **/idempotency-logs/
 
 # ==========================================
-# KUBERNETES & SECRETS (Bảo mật)
+# KUBERNETES / SECRETS
 # ==========================================
-# Bắt buộc phải ignore file này (Quyền điều khiển Cluster)
-**/kubeconfig
-**/.kubeconfig_b64.txt
 phase2-k8s/backend/secret.yaml
-
-# File thực thi phần mềm (Không push tool vào Git)
+phase2-k8s/backend/secret-real.yaml
+secret.yaml
 **/kubectl
 
-# File chứng chỉ và khóa riêng tư
-**/*.pem
-**/*.key
+# ==========================================
+# MONITORING
+# ==========================================
+grafana-data/
+prometheus-data/
 
 # ==========================================
-# HỆ ĐIỀU HÀNH & IDE (Rác hệ thống)
+# NODE / BUILD
+# ==========================================
+node_modules/
+dist/
+build/
+.npm
+.eslintcache
+npm-debug.log*
+
+# ==========================================
+# REPORT / GENERATED
+# ==========================================
+report/
+
+# ==========================================
+# IDE / OS
 # ==========================================
 .DS_Store
 .vscode/
 .idea/
 *.swp
-report/
-node_modules/
-dist/
-
-#-=========================================
-.env
-secret.yaml
+*.bak
