@@ -6,6 +6,7 @@
 *.key
 kubeconfig
 inventory.ini
+phase2-k8s/backend/secret.yaml
 
 # --- [TERRAFORM] ---
 .terraform/
