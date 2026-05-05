@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: production
+data:
+  POSTGRES_DB: "appdb"
+  DB_HOST: "postgres-service"
+  PORT: "8080"
