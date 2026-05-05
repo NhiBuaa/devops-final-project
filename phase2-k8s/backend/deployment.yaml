@@ -106,7 +106,11 @@ spec:
 
           readinessProbe:
             httpGet:
+<<<<<<< HEAD
               path: /health
+=======
+              path: /health/ready
+>>>>>>> eacded4 (feat: config namespace and deploy)
               port: 8080
             initialDelaySeconds: 10
             periodSeconds: 10
