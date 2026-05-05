@@ -1,0 +1,176 @@
+---
+# =============================================================================
+# Role: k3s-master - Cài đặt và cấu hình K3s Control Plane
+# Idempotent: Kiểm tra trạng thái trước khi thực hiện mỗi bước
+# =============================================================================
+
+- name: "[K3S-MASTER] Check if K3s is already installed"
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+  register: k3s_binary
+  tags: [k3s, master]
+
+- name: "[K3S-MASTER] Check current K3s version (if installed)"
+  ansible.builtin.command: k3s --version
+  register: k3s_current_version
+  changed_when: false
+  failed_when: false
+  when: k3s_binary.stat.exists
+  tags: [k3s, master]
+
+- name: "[K3S-MASTER] Download K3s installer script"
+  ansible.builtin.get_url:
+    url: https://get.k3s.io
+    dest: /tmp/k3s-install.sh
+    mode: '0755'
+    force: yes  # Luôn download mới nhất để đảm bảo script up-to-date
+  tags: [k3s, master]
+
+- name: "[K3S-MASTER] Install K3s server (Control Plane)"
+  ansible.builtin.command: >
+    /tmp/k3s-install.sh
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    INSTALL_K3S_EXEC: >-
+      server
+      --cluster-init
+      --tls-san {{ ansible_host }}
+      --tls-san {{ ansible_default_ipv4.address }}
+      --disable traefik
+      --write-kubeconfig-mode 644
+      --node-name master
+  when: >
+    not k3s_binary.stat.exists or
+    (k3s_current_version.stdout is defined and k3s_version not in k3s_current_version.stdout)
+  register: k3s_install_result
+  tags: [k3s, master]
+
+- name: "[K3S-MASTER] Wait for K3s service to be active"
+  ansible.builtin.systemd:
+    name: k3s
+    state: started
+    enabled: yes
+  tags: [k3s, master]
+
+- name: "[K3S-MASTER] Wait for K3s API server to be ready"
+  ansible.builtin.wait_for:
+    port: 6443
+    host: localhost
+    delay: 10
+    timeout: 120
+  tags: [k3s, master]
+
+- name: "[K3S-MASTER] Wait for node to be Ready"
+  ansible.builtin.command: k3s kubectl get nodes --no-headers
+  register: node_status
+  until: "'Ready' in node_status.stdout and 'NotReady' not in node_status.stdout"
+  retries: 20
+  delay: 10
+  changed_when: false
+  tags: [k3s, master]
+
+- name: "[K3S-MASTER] Ensure .kube directory exists"
+  ansible.builtin.file:
+    path: "{{ kubeconfig_dir }}"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+  tags: [k3s, master, kubeconfig]
+
+- name: "[K3S-MASTER] Copy kubeconfig for ubuntu user"
+  ansible.builtin.copy:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: "{{ kubeconfig_path }}"
+    remote_src: yes
+    owner: ubuntu
+    group: ubuntu
+    mode: '0600'
+  tags: [k3s, master, kubeconfig]
+
+- name: "[K3S-MASTER] Update kubeconfig server address to public IP"
+  ansible.builtin.replace:
+    path: "{{ kubeconfig_path }}"
+    regexp: 'https://127\.0\.0\.1:6443'
+    replace: "https://{{ ansible_host }}:6443"
+  tags: [k3s, master, kubeconfig]
+
+- name: "[K3S-MASTER] Add KUBECONFIG to ubuntu user's .bashrc"
+  ansible.builtin.lineinfile:
+    path: /home/ubuntu/.bashrc
+    line: 'export KUBECONFIG=/home/ubuntu/.kube/config'
+    state: present
+    create: yes
+  tags: [k3s, master, kubeconfig]
+
+- name: "[K3S-MASTER] Add kubectl autocomplete to .bashrc"
+  ansible.builtin.blockinfile:
+    path: /home/ubuntu/.bashrc
+    marker: "# {mark} ANSIBLE MANAGED - kubectl autocomplete"
+    block: |
+      source <(kubectl completion bash)
+      alias k=kubectl
+      complete -o default -F __start_kubectl k
+    create: yes
+  tags: [k3s, master, kubeconfig]
+
+- name: "[K3S-MASTER] Read K3s node token"
+  ansible.builtin.slurp:
+    src: "{{ k3s_token_file }}"
+  register: k3s_token_raw
+  tags: [k3s, master, token]
+
+- name: "[K3S-MASTER] Set K3s token fact (share với worker nodes)"
+  ansible.builtin.set_fact:
+    k3s_node_token: "{{ k3s_token_raw.content | b64decode | trim }}"
+  tags: [k3s, master, token]
+
+# =============================================================================
+# FETCH KUBECONFIG VỀ MÁY LOCAL
+# Idempotent: fetch luôn ghi đè nếu nội dung thay đổi (checksum-based)
+# =============================================================================
+
+- name: "[K3S-MASTER] Create local directory for kubeconfig"
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}"
+    state: directory
+    mode: '0755'
+  delegate_to: localhost
+  become: no
+  tags: [k3s, master, kubeconfig, local]
+
+- name: "[K3S-MASTER] Fetch kubeconfig from master to local machine"
+  ansible.builtin.fetch:
+    src: "{{ kubeconfig_path }}"
+    dest: "{{ playbook_dir }}/kubeconfig"
+    flat: yes         # Không tạo thư mục lồng nhau, lưu thẳng ra file
+    validate_checksum: yes
+  tags: [k3s, master, kubeconfig, local]
+
+- name: "[K3S-MASTER] Replace server address in local kubeconfig with public IP"
+  ansible.builtin.replace:
+    path: "{{ playbook_dir }}/kubeconfig"
+    regexp: 'https://127\.0\.0\.1:6443'
+    replace: "https://{{ ansible_host }}:6443"
+  delegate_to: localhost
+  become: no
+  tags: [k3s, master, kubeconfig, local]
+
+- name: "[K3S-MASTER] Set secure permissions on local kubeconfig"
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}/kubeconfig"
+    mode: '0600'
+  delegate_to: localhost
+  become: no
+  tags: [k3s, master, kubeconfig, local]
+
+- name: "[K3S-MASTER] Confirm local kubeconfig path"
+  ansible.builtin.debug:
+    msg: |
+      Kubeconfig đã được lưu về local tại: {{ playbook_dir }}/kubeconfig
+         Dùng lệnh sau để kết nối cluster từ máy local:
+         export KUBECONFIG={{ playbook_dir }}/kubeconfig
+         kubectl get nodes
+  delegate_to: localhost
+  become: no
+  tags: [k3s, master, kubeconfig, local]

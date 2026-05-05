@@ -1,0 +1,450 @@
+
+PLAY [PLAY 1 - Common Configuration for All Nodes] *****************************
+
+TASK [Gathering Facts] *********************************************************
+Saturday 02 May 2026  13:12:38 +0700 (0:00:00.024)       0:00:00.024 ********** 
+ok: [worker-1]
+ok: [master]
+
+TASK [common : [COMMON] Update apt cache] **************************************
+Saturday 02 May 2026  13:12:42 +0700 (0:00:04.448)       0:00:04.473 ********** 
+ok: [worker-1]
+ok: [master]
+
+TASK [common : [COMMON] Install required system packages] **********************
+Saturday 02 May 2026  13:12:44 +0700 (0:00:01.460)       0:00:05.933 ********** 
+ok: [worker-1]
+ok: [master]
+
+TASK [common : [COMMON] Set timezone to Asia/Ho_Chi_Minh] **********************
+Saturday 02 May 2026  13:12:45 +0700 (0:00:01.367)       0:00:07.300 ********** 
+ok: [worker-1]
+ok: [master]
+
+TASK [common : [COMMON] Disable swap (required for Kubernetes)] ****************
+Saturday 02 May 2026  13:12:46 +0700 (0:00:01.126)       0:00:08.426 ********** 
+ok: [worker-1]
+ok: [master]
+
+TASK [common : [COMMON] Ensure swap is disabled in /etc/fstab] *****************
+Saturday 02 May 2026  13:12:47 +0700 (0:00:00.858)       0:00:09.285 ********** 
+ok: [worker-1]
+ok: [master]
+
+TASK [common : [COMMON] Load required kernel modules] **************************
+Saturday 02 May 2026  13:12:48 +0700 (0:00:00.799)       0:00:10.084 ********** 
+ok: [worker-1] => (item=br_netfilter)
+ok: [master] => (item=br_netfilter)
+ok: [worker-1] => (item=overlay)
+ok: [master] => (item=overlay)
+
+TASK [common : [COMMON] Ensure kernel modules persist across reboots] **********
+Saturday 02 May 2026  13:12:49 +0700 (0:00:01.471)       0:00:11.556 ********** 
+ok: [worker-1] => (item=br_netfilter)
+ok: [master] => (item=br_netfilter)
+ok: [worker-1] => (item=overlay)
+ok: [master] => (item=overlay)
+
+TASK [common : [COMMON] Set kernel parameters for Kubernetes networking] *******
+Saturday 02 May 2026  13:12:50 +0700 (0:00:00.276)       0:00:11.832 ********** 
+[WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+[DEPRECATION WARNING]: Importing 'to_native' from 'ansible.module_utils._text' is deprecated. This feature will be removed from ansible-core version 2.24. Use ansible.module_utils.common.text.converters instead.
+ok: [worker-1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
+ok: [master] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
+ok: [worker-1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
+ok: [master] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
+ok: [worker-1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
+ok: [master] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
+
+TASK [common : [COMMON] Configure UFW - allow internal VPC traffic] ************
+Saturday 02 May 2026  13:12:52 +0700 (0:00:02.577)       0:00:14.410 ********** 
+ok: [worker-1]
+ok: [master]
+
+TASK [common : [COMMON] Configure UFW - allow specific external ports] *********
+Saturday 02 May 2026  13:12:53 +0700 (0:00:01.347)       0:00:15.757 ********** 
+ok: [worker-1] => (item={'port': 22, 'proto': 'tcp', 'comment': 'SSH'})
+ok: [master] => (item={'port': 22, 'proto': 'tcp', 'comment': 'SSH'})
+ok: [worker-1] => (item={'port': 80, 'proto': 'tcp', 'comment': 'HTTP'})
+ok: [master] => (item={'port': 80, 'proto': 'tcp', 'comment': 'HTTP'})
+ok: [worker-1] => (item={'port': 443, 'proto': 'tcp', 'comment': 'HTTPS'})
+ok: [master] => (item={'port': 443, 'proto': 'tcp', 'comment': 'HTTPS'})
+ok: [worker-1] => (item={'port': 6443, 'proto': 'tcp', 'comment': 'Kubernetes API Server'})
+ok: [master] => (item={'port': 6443, 'proto': 'tcp', 'comment': 'Kubernetes API Server'})
+ok: [worker-1] => (item={'port': 8472, 'proto': 'udp', 'comment': 'K3s Flannel VXLAN'})
+ok: [master] => (item={'port': 8472, 'proto': 'udp', 'comment': 'K3s Flannel VXLAN'})
+ok: [worker-1] => (item={'port': 10250, 'proto': 'tcp', 'comment': 'Kubelet metrics'})
+ok: [master] => (item={'port': 10250, 'proto': 'tcp', 'comment': 'Kubelet metrics'})
+ok: [worker-1] => (item={'port': 9090, 'proto': 'tcp', 'comment': 'Prometheus'})
+ok: [master] => (item={'port': 9090, 'proto': 'tcp', 'comment': 'Prometheus'})
+ok: [worker-1] => (item={'port': 32000, 'proto': 'tcp', 'comment': 'Grafana'})
+ok: [master] => (item={'port': 32000, 'proto': 'tcp', 'comment': 'Grafana'})
+ok: [master] => (item={'port': '30000:32767', 'proto': 'tcp', 'comment': 'NodePort range'})
+ok: [worker-1] => (item={'port': '30000:32767', 'proto': 'tcp', 'comment': 'NodePort range'})
+
+TASK [common : [COMMON] Enable UFW with default deny incoming] *****************
+Saturday 02 May 2026  13:13:04 +0700 (0:00:10.064)       0:00:25.822 ********** 
+ok: [worker-1]
+ok: [master]
+
+TASK [common : [COMMON] Set hostname correctly] ********************************
+Saturday 02 May 2026  13:13:06 +0700 (0:00:02.395)       0:00:28.217 ********** 
+ok: [worker-1]
+ok: [master]
+
+TASK [common : [COMMON] Update /etc/hosts with hostname] ***********************
+Saturday 02 May 2026  13:13:08 +0700 (0:00:01.716)       0:00:29.934 ********** 
+ok: [worker-1]
+ok: [master]
+
+TASK [[POST] Confirm common setup complete on master] **************************
+Saturday 02 May 2026  13:13:08 +0700 (0:00:00.720)       0:00:30.654 ********** 
+ok: [master] => {
+    "msg": "Common configuration complete on master (54.251.123.127)"
+}
+ok: [worker-1] => {
+    "msg": "Common configuration complete on worker-1 (18.141.240.69)"
+}
+
+PLAY [PLAY 2 - Install K3s Master (Control Plane)] *****************************
+
+TASK [Gathering Facts] *********************************************************
+Saturday 02 May 2026  13:13:08 +0700 (0:00:00.060)       0:00:30.715 ********** 
+ok: [master]
+
+TASK [k3s-master : [K3S-MASTER] Check if K3s is already installed] *************
+Saturday 02 May 2026  13:13:10 +0700 (0:00:01.619)       0:00:32.335 ********** 
+ok: [master]
+
+TASK [k3s-master : [K3S-MASTER] Check current K3s version (if installed)] ******
+Saturday 02 May 2026  13:13:11 +0700 (0:00:01.143)       0:00:33.478 ********** 
+ok: [master]
+
+TASK [k3s-master : [K3S-MASTER] Download K3s installer script] *****************
+Saturday 02 May 2026  13:13:12 +0700 (0:00:00.651)       0:00:34.129 ********** 
+ok: [master]
+
+TASK [k3s-master : [K3S-MASTER] Install K3s server (Control Plane)] ************
+Saturday 02 May 2026  13:13:13 +0700 (0:00:01.116)       0:00:35.246 ********** 
+skipping: [master]
+
+TASK [k3s-master : [K3S-MASTER] Wait for K3s service to be active] *************
+Saturday 02 May 2026  13:13:13 +0700 (0:00:00.026)       0:00:35.273 ********** 
+ok: [master]
+
+TASK [k3s-master : [K3S-MASTER] Wait for K3s API server to be ready] ***********
+Saturday 02 May 2026  13:13:14 +0700 (0:00:01.464)       0:00:36.738 ********** 
+ok: [master]
+
+TASK [k3s-master : [K3S-MASTER] Wait for node to be Ready] *********************
+Saturday 02 May 2026  13:13:24 +0700 (0:00:09.804)       0:00:46.543 ********** 
+ok: [master]
+
+TASK [k3s-master : [K3S-MASTER] Ensure .kube directory exists] *****************
+Saturday 02 May 2026  13:13:25 +0700 (0:00:00.900)       0:00:47.444 ********** 
+ok: [master]
+
+TASK [k3s-master : [K3S-MASTER] Copy kubeconfig for ubuntu user] ***************
+Saturday 02 May 2026  13:13:26 +0700 (0:00:00.950)       0:00:48.394 ********** 
+changed: [master]
+
+TASK [k3s-master : [K3S-MASTER] Update kubeconfig server address to public IP] ***
+Saturday 02 May 2026  13:13:27 +0700 (0:00:01.290)       0:00:49.684 ********** 
+--- before: /home/ubuntu/.kube/config
++++ after: /home/ubuntu/.kube/config
+@@ -2,7 +2,7 @@
+ clusters:
+ - cluster:
+     certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJkekNDQVIyZ0F3SUJBZ0lCQURBS0JnZ3Foa2pPUFFRREFqQWpNU0V3SHdZRFZRUUREQmhyTTNNdGMyVnkKZG1WeUxXTmhRREUzTnpjMU16STFPVEF3SGhjTk1qWXdORE13TURjd016RXdXaGNOTXpZd05ESTNNRGN3TXpFdwpXakFqTVNFd0h3WURWUVFEREJock0zTXRjMlZ5ZG1WeUxXTmhRREUzTnpjMU16STFPVEF3V1RBVEJnY3Foa2pPClBRSUJCZ2dxaGtqT1BRTUJCd05DQUFTK2hId2JvTzd1RFR5QVFFOUl3NzMrRzUyNlZIbWVkVU8ydXlCdUhQYTgKMHlJdnNndU9UYkg1d2E4cXltVzI4aEVaUmhOcDZYc0t2aUlnWmhXaUNTUEVvMEl3UURBT0JnTlZIUThCQWY4RQpCQU1DQXFRd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pBZEJnTlZIUTRFRmdRVXlJby9IUVNGQk9NT0h6VDJ0Z2dXCngwZkIrMkF3Q2dZSUtvWkl6ajBFQXdJRFNBQXdSUUloQUlNZCsrVE5CRkZxSmNtcWduMUFJV1ZCL0RxdGJ6OHoKcVZwOWJOYk9Tb0dZQWlCNk5CckxQcmV4SGxQQ1lPdXltcDZBOWxrVjh0eHM0NTNXNU9zRzhVNDBOdz09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+-    server: https://127.0.0.1:6443
++    server: https://54.251.123.127:6443
+   name: default
+ contexts:
+ - context:
+
+changed: [master]
+
+TASK [k3s-master : [K3S-MASTER] Add KUBECONFIG to ubuntu user's .bashrc] *******
+Saturday 02 May 2026  13:13:28 +0700 (0:00:00.645)       0:00:50.330 ********** 
+ok: [master]
+
+TASK [k3s-master : [K3S-MASTER] Add kubectl autocomplete to .bashrc] ***********
+Saturday 02 May 2026  13:13:29 +0700 (0:00:00.609)       0:00:50.940 ********** 
+ok: [master]
+
+TASK [k3s-master : [K3S-MASTER] Read K3s node token] ***************************
+Saturday 02 May 2026  13:13:29 +0700 (0:00:00.796)       0:00:51.737 ********** 
+ok: [master]
+
+TASK [k3s-master : [K3S-MASTER] Set K3s token fact (share với worker nodes)] ***
+Saturday 02 May 2026  13:13:30 +0700 (0:00:00.822)       0:00:52.559 ********** 
+ok: [master]
+
+TASK [k3s-master : [K3S-MASTER] Create local directory for kubeconfig] *********
+Saturday 02 May 2026  13:13:30 +0700 (0:00:00.055)       0:00:52.615 ********** 
+ok: [master -> localhost]
+
+TASK [k3s-master : [K3S-MASTER] Fetch kubeconfig from master to local machine] ***
+Saturday 02 May 2026  13:13:31 +0700 (0:00:00.476)       0:00:53.092 ********** 
+ok: [master]
+
+TASK [k3s-master : [K3S-MASTER] Replace server address in local kubeconfig with public IP] ***
+Saturday 02 May 2026  13:13:32 +0700 (0:00:00.684)       0:00:53.776 ********** 
+ok: [master -> localhost]
+
+TASK [k3s-master : [K3S-MASTER] Set secure permissions on local kubeconfig] ****
+Saturday 02 May 2026  13:13:32 +0700 (0:00:00.459)       0:00:54.235 ********** 
+ok: [master -> localhost]
+
+TASK [k3s-master : [K3S-MASTER] Confirm local kubeconfig path] *****************
+Saturday 02 May 2026  13:13:32 +0700 (0:00:00.409)       0:00:54.645 ********** 
+ok: [master -> localhost] => {
+    "msg": "Kubeconfig đã được lưu về local tại: /home/nhibuaa/devops-final-project/phase1-infrastructure/ansible/kubeconfig\n   Dùng lệnh sau để kết nối cluster từ máy local:\n   export KUBECONFIG=/home/nhibuaa/devops-final-project/phase1-infrastructure/ansible/kubeconfig\n   kubectl get nodes\n"
+}
+
+TASK [[POST] K3s Master setup complete] ****************************************
+Saturday 02 May 2026  13:13:32 +0700 (0:00:00.037)       0:00:54.682 ********** 
+ok: [master] => {
+    "msg": "K3s Master node ready at https://54.251.123.127:6443"
+}
+
+PLAY [PLAY 3 - Join K3s Worker Nodes to Cluster] *******************************
+
+TASK [Gathering Facts] *********************************************************
+Saturday 02 May 2026  13:13:32 +0700 (0:00:00.044)       0:00:54.727 ********** 
+ok: [worker-1]
+
+TASK [k3s-worker : [K3S-WORKER] Check if K3s agent is already installed] *******
+Saturday 02 May 2026  13:13:34 +0700 (0:00:01.593)       0:00:56.321 ********** 
+ok: [worker-1]
+
+TASK [k3s-worker : [K3S-WORKER] Check if node is already joined to cluster] ****
+Saturday 02 May 2026  13:13:35 +0700 (0:00:00.854)       0:00:57.175 ********** 
+ok: [worker-1]
+
+TASK [k3s-worker : [K3S-WORKER] Get master node token from master] *************
+Saturday 02 May 2026  13:13:35 +0700 (0:00:00.582)       0:00:57.757 ********** 
+ok: [worker-1]
+
+TASK [k3s-worker : [K3S-WORKER] Download K3s installer script] *****************
+Saturday 02 May 2026  13:13:36 +0700 (0:00:00.048)       0:00:57.806 ********** 
+ok: [worker-1]
+
+TASK [k3s-worker : [K3S-WORKER] Install K3s agent and join cluster] ************
+Saturday 02 May 2026  13:13:36 +0700 (0:00:00.886)       0:00:58.692 ********** 
+changed: [worker-1]
+
+TASK [k3s-worker : [K3S-WORKER] Ensure K3s agent service is started and enabled] ***
+Saturday 02 May 2026  13:13:41 +0700 (0:00:04.408)       0:01:03.101 ********** 
+ok: [worker-1]
+
+TASK [k3s-worker : [K3S-WORKER] Wait for worker node to be visible on master] ***
+Saturday 02 May 2026  13:13:42 +0700 (0:00:01.479)       0:01:04.581 ********** 
+ok: [worker-1 -> master(54.251.123.127)]
+
+TASK [k3s-worker : [K3S-WORKER] Show worker node status] ***********************
+Saturday 02 May 2026  13:13:43 +0700 (0:00:00.958)       0:01:05.540 ********** 
+ok: [worker-1] => {
+    "msg": "Worker node worker-1 status: worker-1   Ready   <none>   47h   v1.29.4+k3s1"
+}
+
+TASK [[POST] K3s Worker setup complete] ****************************************
+Saturday 02 May 2026  13:13:43 +0700 (0:00:00.039)       0:01:05.580 ********** 
+ok: [worker-1] => {
+    "msg": "K3s Worker node worker-1 joined cluster"
+}
+
+PLAY [PLAY 4 - Install Kubernetes Tools & Monitoring on Master] ****************
+
+TASK [Gathering Facts] *********************************************************
+Saturday 02 May 2026  13:13:43 +0700 (0:00:00.047)       0:01:05.627 ********** 
+ok: [master]
+
+TASK [[PRE] Ensure python3-pip is installed] ***********************************
+Saturday 02 May 2026  13:13:45 +0700 (0:00:01.569)       0:01:07.197 ********** 
+ok: [master]
+
+TASK [[PRE] Install Python libraries for K8s modules] **************************
+Saturday 02 May 2026  13:13:47 +0700 (0:00:02.548)       0:01:09.745 ********** 
+ok: [master]
+
+TASK [monitoring : [MON] Add Prometheus Community Helm repo] *******************
+Saturday 02 May 2026  13:13:49 +0700 (0:00:01.716)       0:01:11.461 ********** 
+ok: [master]
+
+TASK [monitoring : [MON] Install Prometheus & Grafana via Helm] ****************
+Saturday 02 May 2026  13:13:51 +0700 (0:00:01.571)       0:01:13.033 ********** 
+[WARNING]: The default idempotency check can fail to report changes in certain cases. Install helm diff >= 3.4.1 for better results.
+ok: [master]
+
+TASK [helm-tools : [HELM] Check if Helm is already installed] ******************
+Saturday 02 May 2026  13:13:53 +0700 (0:00:02.294)       0:01:15.327 ********** 
+ok: [master]
+
+TASK [helm-tools : [HELM] Check current Helm version] **************************
+Saturday 02 May 2026  13:13:54 +0700 (0:00:00.895)       0:01:16.222 ********** 
+ok: [master]
+
+TASK [helm-tools : [HELM] Download Helm installer] *****************************
+Saturday 02 May 2026  13:13:55 +0700 (0:00:00.692)       0:01:16.914 ********** 
+skipping: [master]
+
+TASK [helm-tools : [HELM] Install Helm v3.14.4] ********************************
+Saturday 02 May 2026  13:13:55 +0700 (0:00:00.030)       0:01:16.944 ********** 
+skipping: [master]
+
+TASK [helm-tools : [HELM] Verify Helm installation] ****************************
+Saturday 02 May 2026  13:13:55 +0700 (0:00:00.024)       0:01:16.969 ********** 
+ok: [master]
+
+TASK [helm-tools : [HELM] Show installed Helm version] *************************
+Saturday 02 May 2026  13:13:55 +0700 (0:00:00.675)       0:01:17.645 ********** 
+ok: [master] => {
+    "msg": "Helm installed: v3.14.4+g81c902a"
+}
+
+TASK [helm-tools : [HELM] Add Jetstack Helm repository (for cert-manager)] *****
+Saturday 02 May 2026  13:13:55 +0700 (0:00:00.028)       0:01:17.673 ********** 
+ok: [master]
+
+TASK [helm-tools : [HELM] Add ingress-nginx Helm repository] *******************
+Saturday 02 May 2026  13:13:57 +0700 (0:00:01.231)       0:01:18.905 ********** 
+ok: [master]
+
+TASK [helm-tools : [HELM] Add Prometheus community Helm repository] ************
+Saturday 02 May 2026  13:13:58 +0700 (0:00:01.152)       0:01:20.057 ********** 
+ok: [master]
+
+TASK [helm-tools : [HELM] Update Helm repositories] ****************************
+Saturday 02 May 2026  13:13:59 +0700 (0:00:01.206)       0:01:21.263 ********** 
+ok: [master]
+
+TASK [helm-tools : [INGRESS] Create ingress-nginx namespace] *******************
+Saturday 02 May 2026  13:14:01 +0700 (0:00:01.729)       0:01:22.993 ********** 
+ok: [master]
+
+TASK [helm-tools : [INGRESS] Install ingress-nginx via Helm] *******************
+Saturday 02 May 2026  13:14:03 +0700 (0:00:02.108)       0:01:25.101 ********** 
+ok: [master]
+
+TASK [helm-tools : [INGRESS] Wait for ingress-nginx to be ready] ***************
+Saturday 02 May 2026  13:14:05 +0700 (0:00:02.002)       0:01:27.103 ********** 
+ok: [master]
+
+TASK [helm-tools : [CERT-MANAGER] Create cert-manager namespace] ***************
+Saturday 02 May 2026  13:14:06 +0700 (0:00:01.142)       0:01:28.246 ********** 
+ok: [master]
+
+TASK [helm-tools : [CERT-MANAGER] Install cert-manager v1.14.5 via Helm] *******
+Saturday 02 May 2026  13:14:08 +0700 (0:00:01.727)       0:01:29.973 ********** 
+ok: [master]
+
+TASK [helm-tools : [CERT-MANAGER] Wait for cert-manager pods to be ready] ******
+Saturday 02 May 2026  13:14:09 +0700 (0:00:01.755)       0:01:31.729 ********** 
+ok: [master]
+
+TASK [helm-tools : [CERT-MANAGER] Create ClusterIssuer for Let's Encrypt (Staging - test trước)] ***
+Saturday 02 May 2026  13:14:11 +0700 (0:00:01.165)       0:01:32.894 ********** 
+ok: [master]
+
+TASK [helm-tools : [CERT-MANAGER] Create ClusterIssuer for Let's Encrypt (Production)] ***
+Saturday 02 May 2026  13:14:12 +0700 (0:00:01.817)       0:01:34.712 ********** 
+ok: [master]
+
+TASK [helm-tools : [CERT-MANAGER] Verify cert-manager ClusterIssuers] **********
+Saturday 02 May 2026  13:14:14 +0700 (0:00:01.810)       0:01:36.522 ********** 
+ok: [master]
+
+TASK [helm-tools : [CERT-MANAGER] Show ClusterIssuers status] ******************
+Saturday 02 May 2026  13:14:15 +0700 (0:00:00.849)       0:01:37.372 ********** 
+ok: [master] => {
+    "msg": [
+        "NAME                  READY   STATUS                                                 AGE",
+        "letsencrypt-prod      True    The ACME account was registered with the ACME server   46h",
+        "letsencrypt-staging   True    The ACME account was registered with the ACME server   46h"
+    ]
+}
+
+TASK [helm-tools : [VERIFY] Get all nodes in cluster] **************************
+Saturday 02 May 2026  13:14:15 +0700 (0:00:00.034)       0:01:37.406 ********** 
+ok: [master]
+
+TASK [helm-tools : [VERIFY] Show cluster nodes] ********************************
+Saturday 02 May 2026  13:14:16 +0700 (0:00:00.790)       0:01:38.196 ********** 
+ok: [master] => {
+    "msg": [
+        "NAME       STATUS   ROLES                       AGE   VERSION        INTERNAL-IP     EXTERNAL-IP   OS-IMAGE           KERNEL-VERSION   CONTAINER-RUNTIME",
+        "master     Ready    control-plane,etcd,master   47h   v1.29.4+k3s1   172.31.23.143   <none>        Ubuntu 26.04 LTS   7.0.0-1004-aws   containerd://1.7.15-k3s1",
+        "worker-1   Ready    <none>                      47h   v1.29.4+k3s1   172.31.34.161   <none>        Ubuntu 26.04 LTS   7.0.0-1004-aws   containerd://1.7.15-k3s1"
+    ]
+}
+
+TASK [helm-tools : [VERIFY] Get all pods across all namespaces] ****************
+Saturday 02 May 2026  13:14:16 +0700 (0:00:00.036)       0:01:38.233 ********** 
+ok: [master]
+
+TASK [helm-tools : [VERIFY] Show all pods] *************************************
+Saturday 02 May 2026  13:14:17 +0700 (0:00:00.805)       0:01:39.038 ********** 
+ok: [master] => {
+    "msg": [
+        "NAMESPACE       NAME                                                     READY   STATUS    RESTARTS      AGE",
+        "cert-manager    cert-manager-79b89f4897-wrz7l                            1/1     Running   1 (11m ago)   46h",
+        "cert-manager    cert-manager-cainjector-9b74bc658-hp84g                  1/1     Running   1 (11m ago)   46h",
+        "cert-manager    cert-manager-webhook-7ddfd7c4bd-bgfm4                    1/1     Running   2 (10m ago)   46h",
+        "ingress-nginx   ingress-nginx-controller-c6n4q                           1/1     Running   1 (11m ago)   47h",
+        "ingress-nginx   ingress-nginx-controller-hd5fl                           1/1     Running   1 (11m ago)   47h",
+        "kube-system     coredns-6799fbcd5-8pf8g                                  1/1     Running   1 (11m ago)   47h",
+        "kube-system     local-path-provisioner-6c86858495-rqnv7                  1/1     Running   2 (10m ago)   47h",
+        "kube-system     metrics-server-54fd9b65b-qv4l6                           1/1     Running   2 (10m ago)   47h",
+        "monitoring      alertmanager-monitoring-stack-kube-prom-alertmanager-0   2/2     Running   0             3m49s",
+        "monitoring      monitoring-stack-grafana-54bb4c58f8-zgkt7                3/3     Running   3 (11m ago)   47h",
+        "monitoring      monitoring-stack-kube-prom-operator-68865847cf-4r99t     1/1     Running   0             3m50s",
+        "monitoring      monitoring-stack-kube-state-metrics-68988b5bc8-fv77f     1/1     Running   1 (11m ago)   47h",
+        "monitoring      monitoring-stack-prometheus-node-exporter-8xp6c          1/1     Running   0             3m50s",
+        "monitoring      monitoring-stack-prometheus-node-exporter-cgdkg          1/1     Running   0             3m48s",
+        "monitoring      prometheus-monitoring-stack-kube-prom-prometheus-0       2/2     Running   2 (11m ago)   47h"
+    ]
+}
+
+TASK [[POST] Final cluster summary] ********************************************
+Saturday 02 May 2026  13:14:17 +0700 (0:00:00.031)       0:01:39.070 ********** 
+ok: [master]
+
+TASK [[POST] Display final cluster state] **************************************
+Saturday 02 May 2026  13:14:18 +0700 (0:00:00.781)       0:01:39.852 ********** 
+ok: [master] => {
+    "msg": "============================================================\nPHASE 1 INFRASTRUCTURE SETUP COMPLETE!\n============================================================\nNAME            STATUS   ROLES                       AGE   VERSION        INTERNAL-IP     EXTERNAL-IP   OS-IMAGE           KERNEL-VERSION   CONTAINER-RUNTIME\nnode/master     Ready    control-plane,etcd,master   47h   v1.29.4+k3s1   172.31.23.143   <none>        Ubuntu 26.04 LTS   7.0.0-1004-aws   containerd://1.7.15-k3s1\nnode/worker-1   Ready    <none>                      47h   v1.29.4+k3s1   172.31.34.161   <none>        Ubuntu 26.04 LTS   7.0.0-1004-aws   containerd://1.7.15-k3s1\n\nNAMESPACE       NAME                                                         READY   STATUS    RESTARTS      AGE     IP              NODE       NOMINATED NODE   READINESS GATES\ncert-manager    pod/cert-manager-79b89f4897-wrz7l                            1/1     Running   1 (11m ago)   46h     10.42.0.16      master     <none>           <none>\ncert-manager    pod/cert-manager-cainjector-9b74bc658-hp84g                  1/1     Running   1 (11m ago)   46h     10.42.1.8       worker-1   <none>           <none>\ncert-manager    pod/cert-manager-webhook-7ddfd7c4bd-bgfm4                    1/1     Running   2 (10m ago)   46h     10.42.0.15      master     <none>           <none>\ningress-nginx   pod/ingress-nginx-controller-c6n4q                           1/1     Running   1 (11m ago)   47h     172.31.34.161   worker-1   <none>           <none>\ningress-nginx   pod/ingress-nginx-controller-hd5fl                           1/1     Running   1 (11m ago)   47h     172.31.23.143   master     <none>           <none>\nkube-system     pod/coredns-6799fbcd5-8pf8g                                  1/1     Running   1 (11m ago)   47h     10.42.0.11      master     <none>           <none>\nkube-system     pod/local-path-provisioner-6c86858495-rqnv7                  1/1     Running   2 (10m ago)   47h     10.42.0.17      master     <none>           <none>\nkube-system     pod/metrics-server-54fd9b65b-qv4l6                           1/1     Running   2 (10m ago)   47h     10.42.0.13      master     <none>           <none>\nmonitoring      pod/alertmanager-monitoring-stack-kube-prom-alertmanager-0   2/2     Running   0             3m49s   10.42.0.18      master     <none>           <none>\nmonitoring      pod/monitoring-stack-grafana-54bb4c58f8-zgkt7                3/3     Running   3 (11m ago)   47h     10.42.1.10      worker-1   <none>           <none>\nmonitoring      pod/monitoring-stack-kube-prom-operator-68865847cf-4r99t     1/1     Running   0             3m50s   10.42.1.13      worker-1   <none>           <none>\nmonitoring      pod/monitoring-stack-kube-state-metrics-68988b5bc8-fv77f     1/1     Running   1 (11m ago)   47h     10.42.1.9       worker-1   <none>           <none>\nmonitoring      pod/monitoring-stack-prometheus-node-exporter-8xp6c          1/1     Running   0             3m50s   172.31.23.143   master     <none>           <none>\nmonitoring      pod/monitoring-stack-prometheus-node-exporter-cgdkg          1/1     Running   0             3m48s   172.31.34.161   worker-1   <none>           <none>\nmonitoring      pod/prometheus-monitoring-stack-kube-prom-prometheus-0       2/2     Running   2 (11m ago)   47h     10.42.1.11      worker-1   <none>           <none>\n============================================================\nTRẠNG THÁI HTTPS & MONITORING:\n  1. Ingress: Đã cài đặt (Nginx)\n  2. SSL: Cert-manager đã sẵn sàng cho nhibuaa.space[cite: 2]\n  3. Monitoring: Prometheus (9090), Grafana (32000)[cite: 3]\n============================================================"
+}
+
+PLAY RECAP *********************************************************************
+master                     : ok=64   changed=2    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0   
+worker-1                   : ok=25   changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
+
+PLAYBOOK RECAP *****************************************************************
+Playbook run took 0 days, 0 hours, 1 minutes, 39 seconds
+
+
+TASKS RECAP ********************************************************************
+Saturday 02 May 2026  13:14:18 +0700 (0:00:00.026)       0:01:39.878 ********** 
+=============================================================================== 
+common : [COMMON] Configure UFW - allow specific external ports -------- 10.06s
+k3s-master : [K3S-MASTER] Wait for K3s API server to be ready ----------- 9.80s
+Gathering Facts --------------------------------------------------------- 4.45s
+k3s-worker : [K3S-WORKER] Install K3s agent and join cluster ------------ 4.41s
+common : [COMMON] Set kernel parameters for Kubernetes networking ------- 2.58s
+[PRE] Ensure python3-pip is installed ----------------------------------- 2.55s
+common : [COMMON] Enable UFW with default deny incoming ----------------- 2.40s
+monitoring : [MON] Install Prometheus & Grafana via Helm ---------------- 2.29s
+helm-tools : [INGRESS] Create ingress-nginx namespace ------------------- 2.11s
+helm-tools : [INGRESS] Install ingress-nginx via Helm ------------------- 2.00s
+helm-tools : [CERT-MANAGER] Create ClusterIssuer for Let's Encrypt (Staging - test trước) --- 1.82s
+helm-tools : [CERT-MANAGER] Create ClusterIssuer for Let's Encrypt (Production) --- 1.81s
+helm-tools : [CERT-MANAGER] Install cert-manager v1.14.5 via Helm ------- 1.76s
+helm-tools : [HELM] Update Helm repositories ---------------------------- 1.73s
+helm-tools : [CERT-MANAGER] Create cert-manager namespace --------------- 1.73s
+common : [COMMON] Set hostname correctly -------------------------------- 1.72s
+[PRE] Install Python libraries for K8s modules -------------------------- 1.72s
+Gathering Facts --------------------------------------------------------- 1.62s
+Gathering Facts --------------------------------------------------------- 1.59s
+monitoring : [MON] Add Prometheus Community Helm repo ------------------- 1.57s

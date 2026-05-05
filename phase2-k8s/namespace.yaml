@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: production
+  labels:
+    project: devops-final
+    environment: production
+    pod-security.kubernetes.io/enforce: baseline
