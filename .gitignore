@@ -1,54 +1,54 @@
-# ==========================================
-# TERRAFORM (Hạ tầng AWS)
-# ==========================================
-# Ignore thư mục cài đặt plugin và biến môi trường
+# SENSITIVE FILES
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+inventory.ini
+kubeconfig
+.kubeconfig_b64.txt
+
+# TERRAFORM
 **/.terraform/
+**/.terraform.lock.hcl
+**/*.tfstate
+**/*.tfstate.*
 **/*.tfvars
 **/*.tfvars.json
-
-# Ignore file trạng thái (CHỨA DỮ LIỆU NHẠY CẢM)
-**/*.tfstate
-**/*.tfstate.backup
-
-# Ignore file log và file kế hoạch tạm thời
-**/.terraform.lock.hcl
 **/tfplan
+crash.log
+override.tf
+override.tf.json
 
-# ==========================================
-# ANSIBLE (Cấu hình Server)
-# ==========================================
-# Ignore các file nhật ký chạy lệnh
+# ANSIBLE
 **/*.retry
-
-# Ignore kết quả script test tự động
+ansible_debug.log
 **/idempotency-logs/
 
-# ==========================================
-# KUBERNETES & SECRETS (Bảo mật)
-# ==========================================
-# Bắt buộc phải ignore file này (Quyền điều khiển Cluster)
-**/kubeconfig
-**/.kubeconfig_b64.txt
+# K8S / SECRETS
 phase2-k8s/backend/secret.yaml
-
-# File thực thi phần mềm (Không push tool vào Git)
+phase2-k8s/backend/secret-real.yaml
+secret.yaml
 **/kubectl
 
-# File chứng chỉ và khóa riêng tư
-**/*.pem
-**/*.key
+# MONITORING
+grafana-data/
+prometheus-data/
 
-# ==========================================
-# HỆ ĐIỀU HÀNH & IDE (Rác hệ thống)
-# ==========================================
+# BUILD
+node_modules/
+dist/
+build/
+.npm
+.eslintcache
+npm-debug.log*
+
+# REPORT
+report/
+
+# IDE / OS
 .DS_Store
 .vscode/
 .idea/
 *.swp
-report/
-node_modules/
-dist/
-
-#-=========================================
-.env
-secret.yaml
+*.bak
