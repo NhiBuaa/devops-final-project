@@ -1,0 +1,35 @@
+# =============================================================================
+# .trivyignore — Trivy CVE Allowlist
+# File: .trivyignore (đặt ở root repo)
+#
+# Mục đích: Whitelist các CVE đã được đánh giá và chấp nhận rủi ro có kiểm soát
+# Bắt buộc: Mỗi entry phải có comment giải thích lý do và ngày review
+#
+# QUAN TRỌNG CHO BÁO CÁO:
+#   "Teams may implement allowlists or documented risk acceptance strategies,
+#    which must be justified and explained in the technical report."
+#   — Final Exam Specification, Section 4.2.1
+# =============================================================================
+
+# Format:
+# CVE-XXXX-XXXXX  # Lý do | Ngày review | Reviewer
+
+# ── Ví dụ entries (thay bằng CVE thật nếu cần) ───────────────────────────────
+
+# CVE-2023-44487   # HTTP/2 Rapid Reset - Alpine base image chưa có patch
+#                  # Mitigated bởi: nginx rate limiting trong Ingress (100 rps)
+#                  # Reviewed: 2024-01-15 | Team DevOps
+#                  # Next review: 2024-04-15
+
+# CVE-2023-46234   # nodejs - browserify-sign signature malleability
+#                  # Chỉ ảnh hưởng browser environment, backend không dùng
+#                  # Reviewed: 2024-01-15 | Team DevOps
+
+# ── Hướng dẫn thêm entry mới ─────────────────────────────────────────────────
+# 1. Chạy: trivy image your-image:tag --severity CRITICAL,HIGH
+# 2. Với mỗi CVE muốn whitelist:
+#    a. Đọc kỹ mô tả CVE tại https://nvd.nist.gov/
+#    b. Đánh giá impact với hệ thống của bạn
+#    c. Ghi rõ lý do + biện pháp giảm thiểu + ngày review
+#    d. Thêm vào file này
+# 3. Commit kèm message: "security: whitelist CVE-XXXX-XXXXX with justification"
