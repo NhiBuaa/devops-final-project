@@ -323,6 +323,8 @@ jobs:
           grep "image:" phase2-k8s/backend/deployment.yaml
 
       - name: "Update Kubernetes resources"
+        env:
+          AD_TOKEN: ${{ secrets.MY_GIT_TOKEN }}
         run: |
           sed -i "s|image: .*backend:.*|image: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}|g" \
             phase2-k8s/backend/deployment.yaml
@@ -331,7 +333,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add phase2-k8s/backend/deployment.yaml
           git commit -m "chore(cd): update backend image to ${{ env.IMAGE_TAG }} [skip ci]"
-          git push origin ${{ github.ref_name }}
+          git push https://x-access-token:${AD_TOKEN}@github.com/${{ github.repository }}.git HEAD:${{ github.ref_name }}
 
       # ── Tier 2 summary ───────────────────────────────────────────────────
       - name: "Write job summary"
