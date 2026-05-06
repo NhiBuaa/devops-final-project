@@ -1,0 +1,534 @@
+# =============================================================================
+# CD Pipeline — Continuous Delivery to Kubernetes (K3s)
+#
+# Flow:
+#   CI success -> Deploy Staging -> Manual Approval -> Deploy Production
+#
+# Zero-downtime: RollingUpdate strategy trên Deployment
+# Rollback: Tự động nếu health check fail sau deploy
+# =============================================================================
+
+name: "CD — Deploy to Kubernetes"
+
+on:
+  # Trigger 1: Chạy sau khi CI pipeline thành công trên nhánh main
+  workflow_run:
+    workflows:
+      - "CI — Frontend"
+      - "CI — Backend and Security"
+    branches:
+      - main
+    types:
+      - completed
+
+  # Trigger 2: Cho phép chạy thủ công từ GitHub UI (có thể chọn tag)
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Docker image tag to deploy (commit SHA)"
+        required: true
+        type: string
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+
+# Ngăn 2 CD chạy song song — tránh race condition khi deploy
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false    # CD không cancel-in-progress (tránh deploy dở)
+
+env:
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  # Tag = commit SHA của CI run đã trigger CD này
+  IMAGE_TAG: ${{ github.event.workflow_run.head_sha || inputs.image_tag }}
+  KUBECTL_VERSION: "v1.29.4"
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────────
+  # GUARD: Chỉ tiếp tục nếu CI đã PASS (không chạy nếu CI fail)
+  # ────────────────────────────────────────────────────────────────────────────
+  check-ci-status:
+    name: "Guard — Verify CI Passed"
+    runs-on: ubuntu-latest
+    # Chỉ cần guard khi trigger từ workflow_run (không cần khi manual dispatch)
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    outputs:
+      image_tag: ${{ steps.resolve-tag.outputs.tag }}
+      should_deploy: ${{ steps.resolve-tag.outputs.should_deploy }}
+
+    steps:
+      - name: "Resolve image tag"
+        id: resolve-tag
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            TAG="${{ inputs.image_tag }}"
+          else
+            TAG="${{ github.event.workflow_run.head_sha }}"
+          fi
+
+          if [ -z "$TAG" ]; then
+            echo "Cannot resolve image tag!"
+            exit 1
+          fi
+
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "should_deploy=true" >> $GITHUB_OUTPUT
+          echo "Resolved image tag: $TAG"
+
+      - name: "Log deployment intent"
+        run: |
+          echo "## CD Pipeline Triggered" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Image Tag | \`${{ steps.resolve-tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered by | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Source CI | ${{ github.event.workflow_run.name || 'Manual' }} |" >> $GITHUB_STEP_SUMMARY
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 1: DEPLOY TO STAGING
+  # ────────────────────────────────────────────────────────────────────────────
+  deploy-staging:
+    name: "Deploy -> Staging"
+    runs-on: ubuntu-latest
+    needs: check-ci-status
+    if: needs.check-ci-status.outputs.should_deploy == 'true'
+    environment:
+      name: staging
+      url: https://staging.nhibuaa.space    # Hiện trong GitHub Deployments tab
+
+    env:
+      IMAGE_TAG: ${{ needs.check-ci-status.outputs.image_tag }}
+      K8S_NAMESPACE: staging
+
+    steps:
+      - name: "Checkout source code"
+        uses: actions/checkout@v4
+
+      - name: "Setup kubectl ${{ env.KUBECTL_VERSION }}"
+        uses: azure/setup-kubectl@v4
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+
+      # ── Cấu hình kubeconfig từ GitHub Secret ──────────────────────────────
+      # Secret KUBECONFIG_B64 = base64 của file kubeconfig từ Phase 1
+      # Cách tạo: cat ./phase1-iac/ansible/kubeconfig | base64 -w 0
+      - name: "Configure kubeconfig"
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+          # Verify kết nối được cluster
+          kubectl cluster-info
+          kubectl get nodes
+
+      # ── Tạo namespace staging nếu chưa có ────────────────────────────────
+      - name: "Ensure staging namespace exists"
+        run: |
+          kubectl create namespace staging --dry-run=client -o yaml | kubectl apply -f -
+          kubectl label namespace staging environment=staging --overwrite
+
+      # ── Inject image tag vào K8s manifests ───────────────────────────────
+      # Dùng kustomize hoặc sed để thay image tag trong YAML
+      - name: "Update image tags in manifests"
+        run: |
+          # Thay "latest" hoặc placeholder bằng SHA tag thực tế
+          # sed thay trực tiếp trong file YAML
+          sed -i "s|thongchau/frontend:.*|${{ env.DOCKER_USERNAME }}/frontend:${{ env.IMAGE_TAG }}|g" \
+            phase2-k8s/frontend/deployment.yaml
+
+          sed -i "s|thongchau/backend:.*|${{ env.DOCKER_USERNAME }}/backend:${{ env.IMAGE_TAG }}|g" \
+            phase2-k8s/backend/deployment.yaml
+
+          # Verify thay đúng
+          echo "Frontend image:"
+          grep "image:" phase2-k8s/frontend/deployment.yaml
+
+          echo "Backend image:"
+          grep "image:" phase2-k8s/backend/deployment.yaml
+
+      # ── Apply ConfigMaps & Secrets cho staging ────────────────────────────
+      - name: "Apply ConfigMaps and Secrets (staging)"
+        run: |
+          # Inject staging-specific secrets từ GitHub Secrets
+          kubectl create secret generic backend-secret \
+            --namespace=staging \
+            --from-literal=DB_USER="${{ secrets.STAGING_DB_USER }}" \
+            --from-literal=DB_PASSWORD="${{ secrets.STAGING_DB_PASSWORD }}" \
+            --from-literal=JWT_SECRET="${{ secrets.STAGING_JWT_SECRET }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          # Apply ConfigMaps từ Phase 2
+          kubectl apply -f phase2-k8s/frontend/configmap.yaml -n staging
+          kubectl apply -f phase2-k8s/backend/configmap.yaml -n staging
+
+      # ── Deploy Database (staging) ──────────────────────────────────────────
+      - name: "Deploy Database (staging)"
+        run: |
+          kubectl apply -f phase2-k8s/database/statefulset.yaml -n staging
+
+          # Chờ PostgreSQL healthy
+          kubectl wait pod \
+            --namespace=staging \
+            --selector=app=postgres \
+            --for=condition=Ready \
+            --timeout=120s
+
+      # ── ROLLING UPDATE: Deploy Backend ────────────────────────────────────
+      - name: "Rolling update — Backend (staging)"
+        run: |
+          kubectl apply -f phase2-k8s/backend/deployment.yaml -n staging
+
+          # Theo dõi rollout — fail nếu không hoàn thành trong 3 phút
+          # Đây là điểm mấu chốt: nếu pods không healthy -> rollout fail -> step fail
+          kubectl rollout status deployment/backend \
+            --namespace=staging \
+            --timeout=180s
+
+      # ── ROLLING UPDATE: Deploy Frontend ───────────────────────────────────
+      - name: "Rolling update — Frontend (staging)"
+        run: |
+          kubectl apply -f phase2-k8s/frontend/deployment.yaml -n staging
+          kubectl apply -f phase2-k8s/frontend/hpa.yaml -n staging
+
+          kubectl rollout status deployment/frontend \
+            --namespace=staging \
+            --timeout=180s
+
+      # ── Apply Ingress (staging domain) ────────────────────────────────────
+      - name: "Apply Ingress (staging)"
+        run: |
+          # Override domain cho staging bằng sed
+          sed 's/app\.yourdomain\.com/staging.nhibuaa.space/g' \
+            phase2-k8s/ingress/ingress.yaml | \
+            kubectl apply -n staging -f -
+
+      # ── Health Check sau deploy ────────────────────────────────────────────
+      - name: "Post-deploy health check (staging)"
+        id: staging-health
+        run: |
+          echo "Chờ 30s cho Ingress và cert-manager xử lý..."
+          sleep 30
+
+          # Kiểm tra tất cả pods đang Running
+          NOT_READY=$(kubectl get pods -n staging \
+            --field-selector=status.phase!=Running \
+            --no-headers 2>/dev/null | wc -l)
+
+          if [ "$NOT_READY" -gt "0" ]; then
+            echo "Có $NOT_READY pod(s) chưa Running!"
+            kubectl get pods -n staging
+            exit 1
+          fi
+
+          # HTTP health check
+          HTTP_STATUS=$(curl -sk -o /dev/null -w "%{http_code}" \
+            https://staging.nhibuaa.space/healthz || echo "000")
+
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "Health check fail! HTTP status: $HTTP_STATUS"
+            exit 1
+          fi
+
+          echo "Staging health check PASSED (HTTP $HTTP_STATUS)"
+
+      # ── AUTO ROLLBACK nếu health check fail ──────────────────────────────
+      - name: "Auto rollback — Staging (on failure)"
+        if: failure() && steps.staging-health.outcome == 'failure'
+        run: |
+          echo "Health check failed — initiating automatic rollback..."
+
+          # Rollback về revision trước đó
+          kubectl rollout undo deployment/frontend --namespace=staging
+          kubectl rollout undo deployment/backend --namespace=staging
+
+          # Chờ rollback hoàn thành
+          kubectl rollout status deployment/frontend --namespace=staging --timeout=120s
+          kubectl rollout status deployment/backend --namespace=staging --timeout=120s
+
+          echo "Rollback to previous version completed"
+          echo "Staging deployment FAILED — rolled back" >> $GITHUB_STEP_SUMMARY
+          exit 1   # Vẫn fail job để thông báo
+
+      - name: "Staging deployment summary"
+        if: success()
+        run: |
+          echo "## Staging Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | Staging |" >> $GITHUB_STEP_SUMMARY
+          echo "| Image Tag | \`${{ env.IMAGE_TAG }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| URL | https://staging.nhibuaa.space |" >> $GITHUB_STEP_SUMMARY
+          echo "| Deployed by | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          kubectl get pods -n staging >> $GITHUB_STEP_SUMMARY || true
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 2: MANUAL APPROVAL GATE
+  # Người reviewer phải vào GitHub và click "Approve" để tiếp tục
+  # Tự động expire sau 24 giờ nếu không ai approve
+  # ────────────────────────────────────────────────────────────────────────────
+  await-approval:
+    name: "Await Manual Approval for Production"
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    environment:
+      name: production-approval    # Environment này được cấu hình với Required Reviewers
+
+    steps:
+      - name: "Production deployment awaiting approval"
+        run: |
+          echo "=============================================="
+          echo "WAITING FOR MANUAL APPROVAL"
+          echo "=============================================="
+          echo "Staging URL: https://staging.nhibuaa.space"
+          echo "Image Tag:   ${{ needs.check-ci-status.outputs.image_tag }}"
+          echo ""
+          echo "Please review staging and approve in GitHub:"
+          echo "Repo -> Environments -> production-approval -> Review deployments"
+          echo "=============================================="
+
+          echo "## ⏸ Awaiting Production Approval" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Reviewer:** Go to Actions -> This run -> Review pending deployments" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Staging URL to verify:** https://staging.nhibuaa.space" >> $GITHUB_STEP_SUMMARY
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 3: DEPLOY TO PRODUCTION
+  # Chỉ chạy sau khi await-approval PASS (tức là reviewer đã click Approve)
+  # ────────────────────────────────────────────────────────────────────────────
+  deploy-production:
+    name: "Deploy -> Production"
+    runs-on: ubuntu-latest
+    needs:
+      - check-ci-status
+      - await-approval
+    environment:
+      name: production
+      url: https://app.nhibuaa.space
+
+    env:
+      IMAGE_TAG: ${{ needs.check-ci-status.outputs.image_tag }}
+      K8S_NAMESPACE: production
+
+    steps:
+      - name: "Checkout source code"
+        uses: actions/checkout@v4
+
+      - name: "Setup kubectl"
+        uses: azure/setup-kubectl@v4
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+
+      - name: "Configure kubeconfig"
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl cluster-info
+
+      - name: "Snapshot current state (for rollback reference)"
+        id: snapshot
+        run: |
+          # Lưu revision hiện tại trước khi deploy để rollback chính xác
+          FRONTEND_REV=$(kubectl rollout history deployment/frontend \
+            -n production --no-headers 2>/dev/null | tail -1 | awk '{print $1}' || echo "0")
+          BACKEND_REV=$(kubectl rollout history deployment/backend \
+            -n production --no-headers 2>/dev/null | tail -1 | awk '{print $1}' || echo "0")
+
+          echo "frontend_revision=$FRONTEND_REV" >> $GITHUB_OUTPUT
+          echo "backend_revision=$BACKEND_REV" >> $GITHUB_OUTPUT
+
+          echo "Current frontend revision: $FRONTEND_REV"
+          echo "Current backend revision: $BACKEND_REV"
+
+      - name: "Update image tags in manifests"
+        run: |
+          sed -i "s|thongchau/frontend:.*|${{ env.DOCKER_USERNAME }}/frontend:${{ env.IMAGE_TAG }}|g" \
+            phase2-k8s/frontend/deployment.yaml
+          sed -i "s|thongchau/backend:.*|${{ env.DOCKER_USERNAME }}/backend:${{ env.IMAGE_TAG }}|g" \
+            phase2-k8s/backend/deployment.yaml
+
+      - name: "Apply ConfigMaps and Secrets (production)"
+        run: |
+          kubectl create secret generic backend-secret \
+            --namespace=production \
+            --from-literal=DB_USER="${{ secrets.PROD_DB_USER }}" \
+            --from-literal=DB_PASSWORD="${{ secrets.PROD_DB_PASSWORD }}" \
+            --from-literal=JWT_SECRET="${{ secrets.PROD_JWT_SECRET }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl apply -f phase2-k8s/frontend/configmap.yaml -n production
+          kubectl apply -f phase2-k8s/backend/configmap.yaml -n production
+
+      # ── PRODUCTION ROLLING UPDATE: Backend ────────────────────────────────
+      # Kubernetes RollingUpdate đảm bảo zero-downtime:
+      # - maxUnavailable: 1 -> luôn có ít nhất (replicas-1) pods serving traffic
+      # - maxSurge: 1       -> tạo pod mới trước khi tắt pod cũ
+      - name: "Rolling update — Backend (production)"
+        id: deploy-backend
+        run: |
+          echo "Deploying backend image: ${{ env.DOCKER_USERNAME }}/backend:${{ env.IMAGE_TAG }}"
+
+          kubectl apply -f phase2-k8s/backend/deployment.yaml -n production
+          kubectl apply -f phase2-k8s/backend/hpa.yaml -n production
+
+          # --timeout=300s: 5 phút timeout cho production (lâu hơn staging)
+          if ! kubectl rollout status deployment/backend \
+              --namespace=production \
+              --timeout=300s; then
+            echo "backend_failed=true" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          echo "backend_failed=false" >> $GITHUB_OUTPUT
+          echo "Backend rolling update completed"
+
+      # ── PRODUCTION ROLLING UPDATE: Frontend ───────────────────────────────
+      - name: "Rolling update — Frontend (production)"
+        id: deploy-frontend
+        run: |
+          echo "Deploying frontend image: ${{ env.DOCKER_USERNAME }}/frontend:${{ env.IMAGE_TAG }}"
+
+          kubectl apply -f phase2-k8s/frontend/deployment.yaml -n production
+          kubectl apply -f phase2-k8s/frontend/hpa.yaml -n production
+
+          if ! kubectl rollout status deployment/frontend \
+              --namespace=production \
+              --timeout=300s; then
+            echo "frontend_failed=true" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          echo "frontend_failed=false" >> $GITHUB_OUTPUT
+          echo "Frontend rolling update completed"
+
+      - name: "Apply Ingress (production)"
+        run: |
+          kubectl apply -f phase2-k8s/ingress/ingress.yaml -n production
+
+      # ── HEALTH CHECK production ────────────────────────────────────────────
+      - name: "Post-deploy health check (production)"
+        id: prod-health
+        run: |
+          echo "Chờ 45s cho production stable..."
+          sleep 45
+
+          # Check 1: Tất cả pods Running
+          TOTAL_PODS=$(kubectl get pods -n production --no-headers | wc -l)
+          RUNNING_PODS=$(kubectl get pods -n production \
+            --field-selector=status.phase=Running --no-headers | wc -l)
+
+          echo "Pods: $RUNNING_PODS/$TOTAL_PODS Running"
+
+          if [ "$RUNNING_PODS" -lt "$TOTAL_PODS" ]; then
+            echo "Not all pods are Running ($RUNNING_PODS/$TOTAL_PODS)"
+            kubectl get pods -n production
+            exit 1
+          fi
+
+          # Check 2: HTTPS endpoint
+          for i in 1 2 3; do
+            HTTP_STATUS=$(curl -sk -o /dev/null -w "%{http_code}" \
+              https://app.nhibuaa.space/healthz || echo "000")
+            if [ "$HTTP_STATUS" == "200" ]; then
+              echo "Health check $i/3 PASSED (HTTP $HTTP_STATUS)"
+              break
+            fi
+            echo "Health check $i/3: HTTP $HTTP_STATUS — retrying in 15s..."
+            sleep 15
+          done
+
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "Production health check FAILED after 3 attempts!"
+            exit 1
+          fi
+
+      # ── AUTO ROLLBACK PRODUCTION nếu fail ─────────────────────────────────
+      - name: "Auto rollback — Production (on failure)"
+        if: failure()
+        run: |
+          echo "PRODUCTION DEPLOYMENT FAILED — INITIATING ROLLBACK"
+          echo "Rolling back to:"
+          echo "  Frontend revision: ${{ steps.snapshot.outputs.frontend_revision }}"
+          echo "  Backend revision:  ${{ steps.snapshot.outputs.backend_revision }}"
+
+          # Rollback về revision cụ thể đã snapshot trước khi deploy
+          kubectl rollout undo deployment/frontend \
+            --namespace=production \
+            --to-revision=${{ steps.snapshot.outputs.frontend_revision }}
+
+          kubectl rollout undo deployment/backend \
+            --namespace=production \
+            --to-revision=${{ steps.snapshot.outputs.backend_revision }}
+
+          # Chờ rollback ổn định
+          kubectl rollout status deployment/frontend --namespace=production --timeout=180s
+          kubectl rollout status deployment/backend --namespace=production --timeout=180s
+
+          echo ""
+          echo "Production rolled back successfully"
+          kubectl get pods -n production
+
+          # Thông báo qua GitHub Step Summary
+          echo "## PRODUCTION ROLLBACK EXECUTED" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Failed image tag: \`${{ env.IMAGE_TAG }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "Rolled back to frontend revision: ${{ steps.snapshot.outputs.frontend_revision }}" >> $GITHUB_STEP_SUMMARY
+          echo "Rolled back to backend revision: ${{ steps.snapshot.outputs.backend_revision }}" >> $GITHUB_STEP_SUMMARY
+
+      # ── Deployment Record ─────────────────────────────────────────────────
+      - name: "Production deployment summary"
+        if: success()
+        run: |
+          echo "## Production Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | Production |" >> $GITHUB_STEP_SUMMARY
+          echo "| Image Tag | \`${{ env.IMAGE_TAG }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| URL | https://app.nhibuaa.space |" >> $GITHUB_STEP_SUMMARY
+          echo "| Approved by | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          kubectl get pods -n production -o wide >> $GITHUB_STEP_SUMMARY || true
+          echo "" >> $GITHUB_STEP_SUMMARY
+          kubectl get hpa -n production >> $GITHUB_STEP_SUMMARY || true
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 4: NOTIFY (chạy sau cùng, dù pass hay fail)
+  # ────────────────────────────────────────────────────────────────────────────
+  notify:
+    name: "Notify Deployment Result"
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, deploy-production]
+    if: always()    # Luôn chạy kể cả pipeline fail
+
+    steps:
+      - name: "Deployment result notification"
+        run: |
+          STAGING_STATUS="${{ needs.deploy-staging.result }}"
+          PROD_STATUS="${{ needs.deploy-production.result }}"
+
+          echo "=============================================="
+          echo "DEPLOYMENT RESULT"
+          echo "=============================================="
+          echo "Staging:    $STAGING_STATUS"
+          echo "Production: $PROD_STATUS"
+          echo "Image Tag:  ${{ env.IMAGE_TAG }}"
+          echo "=============================================="
+
+          # Trong production: thay bằng Slack/PagerDuty/email notification
+          # Ví dụ Slack:
+          # curl -X POST ${{ secrets.SLACK_WEBHOOK }} \
+          #   -H 'Content-type: application/json' \
+          #   --data "{\"text\":\"Deploy $PROD_STATUS: ${{ env.IMAGE_TAG }}\"}"
