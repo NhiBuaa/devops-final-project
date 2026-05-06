@@ -1,0 +1,69 @@
+name: Frontend CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - "app/backend/**"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './devops-final-project/app/frontend/package-lock.json'
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: ./devops-final-project/app/frontend
+
+      - name: Linting
+        run: npm run lint
+        working-directory: ./devops-final-project/app/frontend
+        # Lệnh này chạy "eslint ." như định nghĩa trong package.json
+
+      - name: Build Application
+        run: npm run build
+        working-directory: ./devops-final-project/app/frontend
+        # Kiểm tra xem code có lỗi TypeScript hoặc Vite build không
+
+  docker-build:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' # Chỉ build docker khi push
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: actions/setup-docker-action@v4
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./devops-final-project/app/frontend
+          file: ./devops-final-project/app/frontend/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/frontend:latest
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
