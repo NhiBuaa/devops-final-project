@@ -17,7 +17,7 @@ on:
       - "CI — Frontend"
       - "CI — Backend and Security"
     branches:
-      - cd-pipeline
+      - main
     types:
       - completed
 
