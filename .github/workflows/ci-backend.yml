@@ -40,8 +40,7 @@ env:
   IS_MAIN_BRANCH: >-
     ${{
       github.ref == 'refs/heads/main' ||
-      github.ref == 'refs/heads/develop' ||
-      github.ref == 'refs/heads/ci-backend'
+      github.ref == 'refs/heads/develop'
     }}
 
 jobs:
@@ -163,8 +162,7 @@ jobs:
     # ── ĐIỀU KIỆN TIER 2: Chỉ chạy khi là branch chính ──────────────────────
     if: >
       github.ref == 'refs/heads/main' ||
-      github.ref == 'refs/heads/develop' ||
-      github.ref == 'refs/heads/ci-backend'
+      github.ref == 'refs/heads/develop'
 
     defaults:
       run:
@@ -219,8 +217,7 @@ jobs:
     if: >
       github.event_name == 'push' && (
         github.ref == 'refs/heads/main' ||
-        github.ref == 'refs/heads/develop' ||
-        github.ref == 'refs/heads/ci-backend'
+        github.ref == 'refs/heads/develop'
       )
 
     outputs:
