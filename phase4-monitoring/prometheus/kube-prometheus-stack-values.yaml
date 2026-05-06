@@ -1,0 +1,292 @@
+# =============================================================================
+# kube-prometheus-stack Helm Values
+# File: prometheus/kube-prometheus-stack-values.yaml
+#
+# Cài một lần, có sẵn: Prometheus + Grafana + Alertmanager + Node Exporter
+# + kube-state-metrics + Prometheus Operator
+# =============================================================================
+
+# ── PROMETHEUS ────────────────────────────────────────────────────────────────
+prometheus:
+  enabled: true
+
+  prometheusSpec:
+    # Ghim version để idempotent
+    image:
+      tag: v2.51.0
+
+    # Retention: lưu data 15 ngày
+    retention: 15d
+    retentionSize: "8GB"
+
+    # Resource limits
+    resources:
+      requests:
+        cpu: "200m"
+        memory: "512Mi"
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+
+    # Persistent storage cho Prometheus data
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path    # K3s default
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+
+    # Tự động discover ServiceMonitor trong mọi namespace
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+
+    # Scrape interval
+    scrapeInterval: "30s"
+    evaluationInterval: "30s"
+
+    # Additional scrape configs — scrape app pods có annotation prometheus.io/scrape=true
+    additionalScrapeConfigs:
+      - job_name: "kubernetes-pods"
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+
+# ── GRAFANA ───────────────────────────────────────────────────────────────────
+grafana:
+  enabled: true
+
+  image:
+    tag: "10.4.0"
+
+  # Admin credentials — override bằng Secret trong production
+  adminUser: admin
+  adminPassword: ""    # Để trống — sẽ inject qua Secret (xem deploy script)
+
+  # Persist Grafana data (dashboards, settings)
+  persistence:
+    enabled: true
+    storageClassName: local-path
+    size: 2Gi
+
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "300m"
+      memory: "256Mi"
+
+  # Expose qua NodePort để Ingress có thể route
+  service:
+    type: ClusterIP
+    port: 3000
+
+  # Datasources được cấu hình tự động
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        # Prometheus datasource
+        - name: Prometheus
+          type: prometheus
+          url: http://kube-prometheus-stack-prometheus:9090
+          access: proxy
+          isDefault: true
+          jsonData:
+            timeInterval: "30s"
+
+        # Loki datasource (log aggregation)
+        - name: Loki
+          type: loki
+          url: http://loki:3100
+          access: proxy
+          jsonData:
+            maxLines: 1000
+
+  # Dashboards tự động load từ ConfigMap
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: "default"
+          orgId: 1
+          folder: "DevOps Final"
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/default
+
+  # Dashboards từ Grafana.com (import bằng ID)
+  dashboards:
+    default:
+      # Kubernetes cluster overview (official)
+      kubernetes-cluster:
+        gnetId: 7249
+        revision: 1
+        datasource: Prometheus
+
+      # Node exporter full
+      node-exporter:
+        gnetId: 1860
+        revision: 37
+        datasource: Prometheus
+
+      # Kubernetes pods
+      kubernetes-pods:
+        gnetId: 6417
+        revision: 1
+        datasource: Prometheus
+
+      # NGINX Ingress Controller
+      nginx-ingress:
+        gnetId: 9614
+        revision: 1
+        datasource: Prometheus
+
+  # Grafana.ini settings
+  grafana.ini:
+    server:
+      root_url: "https://grafana.yourdomain.com"
+    auth:
+      disable_login_form: false
+    security:
+      allow_embedding: true
+    analytics:
+      reporting_enabled: false
+
+# ── ALERTMANAGER ──────────────────────────────────────────────────────────────
+alertmanager:
+  enabled: true
+
+  alertmanagerSpec:
+    image:
+      tag: v0.27.0
+
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "64Mi"
+      limits:
+        cpu: "100m"
+        memory: "128Mi"
+
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 1Gi
+
+  config:
+    global:
+      resolve_timeout: 5m
+      # Slack webhook (thay bằng webhook thật)
+      slack_api_url: "https://hooks.slack.com/services/CHANGE_ME"
+
+    route:
+      group_by: ["alertname", "namespace"]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+      receiver: "slack-notifications"
+      routes:
+        # Critical alerts → immediate
+        - match:
+            severity: critical
+          receiver: "slack-critical"
+          repeat_interval: 1h
+
+        # Warning alerts → standard channel
+        - match:
+            severity: warning
+          receiver: "slack-notifications"
+          repeat_interval: 4h
+
+    receivers:
+      - name: "slack-notifications"
+        slack_configs:
+          - channel: "#devops-alerts"
+            title: '{{ template "slack.default.title" . }}'
+            text: |
+              {{ range .Alerts }}
+              *Alert:* {{ .Annotations.summary }}
+              *Severity:* {{ .Labels.severity }}
+              *Namespace:* {{ .Labels.namespace }}
+              {{ end }}
+            send_resolved: true
+
+      - name: "slack-critical"
+        slack_configs:
+          - channel: "#devops-critical"
+            title: '🚨 CRITICAL: {{ template "slack.default.title" . }}'
+            text: |
+              {{ range .Alerts }}
+              *Alert:* {{ .Annotations.summary }}
+              *Description:* {{ .Annotations.description }}
+              *Namespace:* {{ .Labels.namespace }}
+              *Pod:* {{ .Labels.pod }}
+              {{ end }}
+            send_resolved: true
+
+    templates:
+      - "/etc/alertmanager/config/*.tmpl"
+
+# ── BUILT-IN EXPORTERS ────────────────────────────────────────────────────────
+nodeExporter:
+  enabled: true    # Thu thập CPU, Memory, Disk của node
+
+kubeStateMetrics:
+  enabled: true    # Thu thập trạng thái K8s objects (pods, deployments...)
+
+# ── BUILT-IN RULES ────────────────────────────────────────────────────────────
+defaultRules:
+  create: true
+  rules:
+    alertmanager: true
+    etcd: false        # K3s không expose etcd metrics
+    configReloaders: true
+    general: true
+    k8s: true
+    kubeApiserverAvailability: true
+    kubeApiserverBurnrate: true
+    kubeApiserverHistogram: true
+    kubeApiserverSlos: true
+    kubeControllerManager: false   # K3s
+    kubeProxy: false               # K3s
+    kubeSchedulerAlerting: false   # K3s
+    kubeSchedulerRecording: false  # K3s
+    kubelet: true
+    kubernetesApps: true
+    kubernetesResources: true
+    kubernetesStorage: true
+    kubernetesSystem: true
+    node: true
+    nodeExporterAlerting: true
+    nodeExporterRecording: true
+    prometheus: true
+    prometheusOperator: true

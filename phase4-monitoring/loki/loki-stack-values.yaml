@@ -1,0 +1,101 @@
+# =============================================================================
+# Loki Stack Values — Centralized Logging
+# Cài: Loki (log storage) + Promtail (log collector trên mỗi node)
+# =============================================================================
+
+loki:
+  enabled: true
+
+  image:
+    tag: "2.9.6"
+
+  # Single binary mode (phù hợp cho project quy mô nhỏ/vừa)
+  deploymentMode: SingleBinary
+
+  loki:
+    auth_enabled: false   # Không cần auth trong cluster nội bộ
+
+    commonConfig:
+      replication_factor: 1
+
+    storage:
+      type: filesystem    # Dùng local filesystem (đủ cho project)
+
+    # Retention: giữ log 7 ngày
+    limits_config:
+      retention_period: 168h    # 7 * 24h
+      ingestion_rate_mb: 16
+      ingestion_burst_size_mb: 32
+
+    server:
+      http_listen_port: 3100
+
+  # Persistent storage cho logs
+  singleBinary:
+    replicas: 1
+    persistence:
+      enabled: true
+      storageClass: local-path
+      size: 10Gi
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        cpu: "300m"
+        memory: "512Mi"
+
+# Promtail: chạy trên mỗi node, thu thập logs từ tất cả pods
+promtail:
+  enabled: true
+
+  config:
+    clients:
+      - url: http://loki:3100/loki/api/v1/push
+
+    scrape_configs:
+      # Thu thập tất cả container logs từ Kubernetes
+      - job_name: kubernetes-pods
+        kubernetes_sd_configs:
+          - role: pod
+        pipeline_stages:
+          # Parse JSON logs nếu app log ra JSON format
+          - json:
+              expressions:
+                level: level
+                msg: message
+                timestamp: timestamp
+          - labels:
+              level:
+          - timestamp:
+              source: timestamp
+              format: RFC3339Nano
+
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            target_label: __host__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: pod
+          - source_labels: [__meta_kubernetes_pod_container_name]
+            action: replace
+            target_label: container
+          - replacement: /var/log/pods/*$1/*.log
+            separator: /
+            source_labels:
+              - __meta_kubernetes_pod_uid
+              - __meta_kubernetes_pod_container_name
+            target_label: __path__
+
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "128Mi"
