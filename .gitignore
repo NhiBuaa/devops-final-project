@@ -1,6 +1,4 @@
-# ==========================================
-# SENSITIVE FILES / ENV
-# ==========================================
+# SENSITIVE FILES
 .env
 .env.local
 .env.*.local
@@ -10,9 +8,7 @@ inventory.ini
 kubeconfig
 .kubeconfig_b64.txt
 
-# ==========================================
 # TERRAFORM
-# ==========================================
 **/.terraform/
 **/.terraform.lock.hcl
 **/*.tfstate
@@ -24,30 +20,22 @@ crash.log
 override.tf
 override.tf.json
 
-# ==========================================
 # ANSIBLE
-# ==========================================
 **/*.retry
 ansible_debug.log
 **/idempotency-logs/
 
-# ==========================================
-# KUBERNETES / SECRETS
-# ==========================================
+# K8S / SECRETS
 phase2-k8s/backend/secret.yaml
 phase2-k8s/backend/secret-real.yaml
 secret.yaml
 **/kubectl
 
-# ==========================================
 # MONITORING
-# ==========================================
 grafana-data/
 prometheus-data/
 
-# ==========================================
-# NODE / BUILD
-# ==========================================
+# BUILD
 node_modules/
 dist/
 build/
@@ -55,14 +43,10 @@ build/
 .eslintcache
 npm-debug.log*
 
-# ==========================================
-# REPORT / GENERATED
-# ==========================================
+# REPORT
 report/
 
-# ==========================================
 # IDE / OS
-# ==========================================
 .DS_Store
 .vscode/
 .idea/

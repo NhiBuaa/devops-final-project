@@ -1,0 +1,70 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: main-ingress
+  namespace: production
+  labels:
+    app: ingress
+    project: devops-final
+  annotations:
+    # Báo cho cert-manager tự động cấp SSL
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    traefik.ingress.kubernetes.io/router.tls: "true"
+
+spec:
+  # Khai báo rõ ràng sử dụng Traefik
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - app.nhibuaa.space
+      secretName: tls-production-cert
+  rules:
+    - host: app.nhibuaa.space
+      http:
+        paths:
+          # Ưu tiên /api để định tuyến luồng dữ liệu về Backend
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-service
+                port:
+                  number: 8080
+          # Các luồng truy cập web bình thường sẽ về Frontend
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-service
+                port:
+                  number: 80
+
+---
+# Ingress riêng cho Grafana monitoring dashboard
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: monitoring-ingress
+  namespace: monitoring
+  labels:
+    project: devops-final
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - grafana.nhibuaa.space
+      secretName: tls-grafana-cert
+  rules:
+    - host: grafana.nhibuaa.space
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: monitoring-stack-grafana
+                port:
+                  number: 80
