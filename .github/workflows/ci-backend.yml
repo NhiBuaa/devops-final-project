@@ -1,6 +1,14 @@
 # =============================================================================
 # CI Pipeline — Backend (Node.js)
 #
+# TIER 1 — MỌI BRANCH (feature/*, hotfix/*, ci-*):
+#   Lint -> Test -> SAST Scan
+#   Mục đích: Kiểm tra code "sạch" trước khi merge. Không build image.
+#
+# TIER 2 — BRANCH CHÍNH (main / develop):
+#   Lint -> Test -> SAST -> Build -> Docker Build -> Trivy Scan -> Push -> Update K8s Manifest
+#   Mục đích: Tạo artifact chính thức và cập nhật trạng thái deployment.
+#
 # Trigger: push vào main/develop, PR vào main
 # Stages: lint -> test -> build -> security scan (code + image) -> docker push
 # =============================================================================
@@ -10,16 +18,11 @@ name: "CI — Backend and Security"
 on:
   push:
     branches:
-      - main
-      - develop
-      - ci-backend
-    paths:
-      - "app/backend/**"
-      - ".github/workflows/ci-backend.yml"
-      - "phase3-cicd/.trivyignore"
+      - "**"                    # Lắng nghe TẤT CẢ branches (Tier 1 chạy ở đây)
   pull_request:
     branches:
-      - main
+      - main                    # Kiểm tra nghiêm ngặt khi PR vào main
+      - develop
     paths:
       - "app/backend/**"
 
@@ -32,12 +35,23 @@ env:
   IMAGE_TAG: ${{ github.sha }}
   NODE_VERSION: "20"
 
+  # ── Helper: xác định đây có phải branch chính không ──────────────────────
+  # Dùng lại trong nhiều jobs -> định nghĩa 1 lần ở đây
+  IS_MAIN_BRANCH: >-
+    ${{
+      github.ref == 'refs/heads/main' ||
+      github.ref == 'refs/heads/develop' ||
+      github.ref == 'refs/heads/ci-backend'
+    }}
+
 jobs:
-  # ──────────────────────────────────────────────────────────────────────────
-  # JOB 1: Lint + Test + Code Security Scan (SAST)
-  # ──────────────────────────────────────────────────────────────────────────
+  # ══════════════════════════════════════════════════════════════════════════
+  # TIER 1 — CHẠY TRÊN MỌI BRANCH
+  # Job: Lint + Test + SAST Scan
+  # Không có điều kiện if -> luôn luôn chạy
+  # ══════════════════════════════════════════════════════════════════════════
   lint-test-scan:
-    name: "Lint, Test & SAST"
+    name: "[ TIER 1 ] Lint, Test & SAST"
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -105,6 +119,7 @@ jobs:
           path: app/backend/coverage/
           retention-days: 7
 
+      # ── SAST: Scan source code (chạy trên MỌI branch) ────────────────────
       - name: "SAST scan with Trivy (filesystem)"
         uses: aquasecurity/trivy-action@master
         with:
@@ -116,13 +131,41 @@ jobs:
           severity: "CRITICAL,HIGH"
           ignore-unfixed: true
 
-  # ──────────────────────────────────────────────────────────────────────────
-  # JOB 2: Build Application
-  # ──────────────────────────────────────────────────────────────────────────
+      # ── Thông báo kết quả Tier 1 ─────────────────────────────────────────
+      - name: "Tier 1 summary"
+        if: always()
+        run: |
+          echo "## [ TIER 1 ] Lint, Test & SAST — ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Is main branch | \`${{ env.IS_MAIN_BRANCH }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ env.IS_MAIN_BRANCH }}" = "true" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "> Branch chính được phát hiện — Tier 2 (Build & Push) sẽ chạy tiếp." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "> Feature branch — Pipeline dừng tại đây. Không build image." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # TIER 2 — CHỈ CHẠY TRÊN BRANCH CHÍNH (main / develop / ci-backend)
+  # Job: Build Application
+  # Gate: lint-test-scan phải PASS + phải là branch chính
+  # ══════════════════════════════════════════════════════════════════════════
   build:
-    name: "Build App"
+    name: "[ TIER 2 ] Build App"
     runs-on: ubuntu-latest
     needs: lint-test-scan
+
+    # ── ĐIỀU KIỆN TIER 2: Chỉ chạy khi là branch chính ──────────────────────
+    if: >
+      github.ref == 'refs/heads/main' ||
+      github.ref == 'refs/heads/develop' ||
+      github.ref == 'refs/heads/ci-backend'
+
     defaults:
       run:
         working-directory: ./app/backend
@@ -161,14 +204,24 @@ jobs:
           path: app/backend/dist/ || app/backend/index.js
           retention-days: 1
 
-  # ──────────────────────────────────────────────────────────────────────────
-  # JOB 3: Docker Build, Image Scan & Push
-  # ──────────────────────────────────────────────────────────────────────────
+  # ══════════════════════════════════════════════════════════════════════════
+  # TIER 2 — CHỈ CHẠY TRÊN BRANCH CHÍNH
+  # Job: Docker Build + Trivy Image Scan + Push + Update K8s Manifest
+  # Gate: build phải PASS + phải là branch chính + phải là push (không phải PR)
+  # ══════════════════════════════════════════════════════════════════════════
   docker-build-push:
-    name: "Docker Build, Scan & Push"
+    name: "[ TIER 2 ] Docker Build, Scan & Push"
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'push'
+
+    # ── ĐIỀU KIỆN TIER 2: Branch chính + event là push (không phải PR) ───────
+    # PR vào main chỉ chạy Tier 1 → Merge xong mới chạy Tier 2
+    if: >
+      github.event_name == 'push' && (
+        github.ref == 'refs/heads/main' ||
+        github.ref == 'refs/heads/develop' ||
+        github.ref == 'refs/heads/ci-backend'
+      )
 
     outputs:
       image-tag: ${{ steps.meta.outputs.tags }}
@@ -204,6 +257,7 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
+      # ── Build image TRƯỚC khi push (để Trivy scan) ───────────────────────
       - name: "Build Docker image (pre-scan)"
         uses: docker/build-push-action@v5
         with:
@@ -215,6 +269,7 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
+      # ── Trivy scan image — FAIL nếu có CRITICAL/HIGH ─────────────────────
       - name: "Scan Docker image with Trivy"
         id: trivy-scan
         uses: aquasecurity/trivy-action@master
@@ -222,12 +277,13 @@ jobs:
           image-ref: ${{ env.IMAGE_NAME }}:scan-${{ env.IMAGE_TAG }}
           trivyignores: "./phase3-cicd/.trivyignore"
           format: "table"
-          exit-code: "1"
+          exit-code: "1"            # Pipeline dừng nếu scan fail → image KHÔNG được push
           severity: "CRITICAL,HIGH"
           ignore-unfixed: true
           vuln-type: "os,library"
           timeout: "10m"
 
+      # ── Push image sau khi Trivy PASS ────────────────────────────────────
       - name: "Build & Push verified image to Docker Hub"
         id: push
         uses: docker/build-push-action@v5
@@ -246,11 +302,38 @@ jobs:
           rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
+      # ══════════════════════════════════════════════════════════════════════
+      # FINAL INTEGRATION: Tự động cập nhật SHA tag vào K8s manifest
+      # Kết quả: file deployment.yaml trong repo phản ánh chính xác
+      # version đang chạy -> Audit trail rõ ràng cho giảng viên
+      # ══════════════════════════════════════════════════════════════════════
+      - name: "Update Kubernetes resources"
+        run: |
+          # Dùng sed để thay thế image cũ bằng image mới kèm SHA
+          sed -i "s|image: .*backend:.*|image: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}|g" \
+            phase2-k8s/backend/deployment.yaml
+
+          echo "Updated deployment.yaml:"
+          grep "image:" phase2-k8s/backend/deployment.yaml
+
+      - name: "Commit and Push update"
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add phase2-k8s/backend/deployment.yaml
+          git commit -m "chore(cd): update backend image to ${{ env.IMAGE_TAG }} [skip ci]"
+          git push origin ${{ github.ref_name }}
+
+      # ── Tier 2 summary ───────────────────────────────────────────────────
       - name: "Write job summary"
         run: |
-          echo "## CI Pipeline — Backend" >> $GITHUB_STEP_SUMMARY
+          echo "## [ TIER 2 ] CI Pipeline — Backend" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Image | \`${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Security scan | PASSED |" >> $GITHUB_STEP_SUMMARY
+          echo "| Digest | \`${{ steps.push.outputs.digest }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered by | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security scan | PASSED (CRITICAL/HIGH = 0) |" >> $GITHUB_STEP_SUMMARY
+          echo "| K8s manifest | Updated deployment.yaml with SHA tag |" >> $GITHUB_STEP_SUMMARY
