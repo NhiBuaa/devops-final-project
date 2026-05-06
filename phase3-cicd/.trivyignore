@@ -1,34 +1,38 @@
 # =============================================================================
-# .trivyignore — Trivy CVE Allowlist
-#
-# Mục đích: Whitelist các CVE đã được đánh giá và chấp nhận rủi ro có kiểm soát
-# Bắt buộc: Mỗi entry phải có comment giải thích lý do và ngày review
-#
-# QUAN TRỌNG CHO BÁO CÁO:
-#   "Teams may implement allowlists or documented risk acceptance strategies,
-#    which must be justified and explained in the technical report."
-#   — Final Exam Specification, Section 4.2.1
+# .trivyignore — Trivy CVE Allowlist for Backend Image
+# Project: Final DevOps - Phase 3
+# Purpose: Whitelist identified CVEs based on risk assessment for runtime environment.
+# Last Reviewed: 2026-05-06 | Team DevOps
 # =============================================================================
 
-# Format:
-# CVE-XXXX-XXXXX  # Lý do | Ngày review | Reviewer
+# --- Package: cross-spawn ---
+# CVE-2024-21538: Regular Expression Denial of Service (ReDoS)
+# Justification: The backend does not spawn processes using unsanitized user input.
+# Mitigation: Input validation and sanitization are enforced at the API gateway.
+CVE-2024-21538
 
-# ── Ví dụ entries (thay bằng CVE thật nếu cần) ───────────────────────────────
+# --- Package: glob ---
+# CVE-2025-64756: Command Injection Vulnerability via Malicious Filenames
+# Justification: Application logic does not use glob patterns on user-controllable filenames.
+# Mitigation: Awaiting compatibility testing for version 11.1.0 upgrade.
+CVE-2025-64756
 
-# CVE-2023-44487   # HTTP/2 Rapid Reset - Alpine base image chưa có patch
-#                  # Mitigated bởi: nginx rate limiting trong Ingress (100 rps)
-#                  # Reviewed: 2026-5-6 | Team DevOps
-#                  # Next review: 2024-04-15
+# --- Package: minimatch ---
+# CVE-2026-26996, CVE-2026-27903, CVE-2026-27904: Denial of Service via glob patterns
+# Justification: These are build-time dependencies used for file matching during CI/CD.
+# Mitigation: Not exposed to external traffic or runtime request handling.
+CVE-2026-26996
+CVE-2026-27903
+CVE-2026-27904
 
-# CVE-2023-46234   # nodejs - browserify-sign signature malleability
-#                  # Chỉ ảnh hưởng browser environment, backend không dùng
-#                  # Reviewed: 2024-01-15 | Team DevOps
-
-# ── Hướng dẫn thêm entry mới ─────────────────────────────────────────────────
-# 1. Chạy: trivy image your-image:tag --severity CRITICAL,HIGH
-# 2. Với mỗi CVE muốn whitelist:
-#    a. Đọc kỹ mô tả CVE tại https://nvd.nist.gov/
-#    b. Đánh giá impact với hệ thống của bạn
-#    c. Ghi rõ lý do + biện pháp giảm thiểu + ngày review
-#    d. Thêm vào file này
-# 3. Commit kèm message: "security: whitelist CVE-XXXX-XXXXX with justification"
+# --- Package: tar ---
+# CVE-2026-23745, CVE-2026-23950, CVE-2026-24842: Arbitrary file overwrite
+# CVE-2026-26960, CVE-2026-29786, CVE-2026-31802: Path traversal/Hardlink poisoning
+# Justification: The application does not perform extraction of untrusted tar archives.
+# Mitigation: Container runs with restricted filesystem permissions and non-root user.
+CVE-2026-23745
+CVE-2026-23950
+CVE-2026-24842
+CVE-2026-26960
+CVE-2026-29786
+CVE-2026-31802
