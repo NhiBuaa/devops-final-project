@@ -1,0 +1,11 @@
+---
+- name: Setup SSH Access for Team Members
+  hosts: k3s_cluster
+  become: yes
+  tasks:
+    - name: Ensure public keys are in authorized_keys
+      ansible.builtin.authorized_key:
+        user: ubuntu
+        state: present
+        key: "{{ lookup('file', 'files/team_keys.pub') }}"
+        exclusive: no

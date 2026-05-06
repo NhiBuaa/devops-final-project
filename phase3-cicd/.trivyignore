@@ -1,6 +1,5 @@
 # =============================================================================
 # .trivyignore — Trivy CVE Allowlist
-# File: .trivyignore (đặt ở root repo)
 #
 # Mục đích: Whitelist các CVE đã được đánh giá và chấp nhận rủi ro có kiểm soát
 # Bắt buộc: Mỗi entry phải có comment giải thích lý do và ngày review
@@ -18,7 +17,7 @@
 
 # CVE-2023-44487   # HTTP/2 Rapid Reset - Alpine base image chưa có patch
 #                  # Mitigated bởi: nginx rate limiting trong Ingress (100 rps)
-#                  # Reviewed: 2024-01-15 | Team DevOps
+#                  # Reviewed: 2026-5-6 | Team DevOps
 #                  # Next review: 2024-04-15
 
 # CVE-2023-46234   # nodejs - browserify-sign signature malleability
