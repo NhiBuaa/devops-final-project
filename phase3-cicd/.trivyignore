@@ -1,0 +1,38 @@
+# =============================================================================
+# .trivyignore — Trivy CVE Allowlist for Backend Image
+# Project: Final DevOps - Phase 3
+# Purpose: Whitelist identified CVEs based on risk assessment for runtime environment.
+# Last Reviewed: 2026-05-06 | Team DevOps
+# =============================================================================
+
+# --- Package: cross-spawn ---
+# CVE-2024-21538: Regular Expression Denial of Service (ReDoS)
+# Justification: The backend does not spawn processes using unsanitized user input.
+# Mitigation: Input validation and sanitization are enforced at the API gateway.
+CVE-2024-21538
+
+# --- Package: glob ---
+# CVE-2025-64756: Command Injection Vulnerability via Malicious Filenames
+# Justification: Application logic does not use glob patterns on user-controllable filenames.
+# Mitigation: Awaiting compatibility testing for version 11.1.0 upgrade.
+CVE-2025-64756
+
+# --- Package: minimatch ---
+# CVE-2026-26996, CVE-2026-27903, CVE-2026-27904: Denial of Service via glob patterns
+# Justification: These are build-time dependencies used for file matching during CI/CD.
+# Mitigation: Not exposed to external traffic or runtime request handling.
+CVE-2026-26996
+CVE-2026-27903
+CVE-2026-27904
+
+# --- Package: tar ---
+# CVE-2026-23745, CVE-2026-23950, CVE-2026-24842: Arbitrary file overwrite
+# CVE-2026-26960, CVE-2026-29786, CVE-2026-31802: Path traversal/Hardlink poisoning
+# Justification: The application does not perform extraction of untrusted tar archives.
+# Mitigation: Container runs with restricted filesystem permissions and non-root user.
+CVE-2026-23745
+CVE-2026-23950
+CVE-2026-24842
+CVE-2026-26960
+CVE-2026-29786
+CVE-2026-31802
