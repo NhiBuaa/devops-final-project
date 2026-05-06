@@ -1,58 +1,65 @@
 #!/bin/bash
 
-# --- Cấu hình ---
+# --- Path Configuration ---
+# Get the absolute path of the directory containing this script
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-# Liên kết đến file kubeconfig được Ansible fetch về ở Phase 1
+
+# Link to the kubeconfig file located in phase1-infrastructure/ansible
 KUBECONFIG_PATH="$SCRIPT_DIR/../phase1-infrastructure/ansible/kubeconfig"
 
 NS="production"
-APP="backend"
+APP=$2 
 
-# Màu sắc
+# Color Codes
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-# Kiểm tra file kubeconfig 
+# Check if kubeconfig file exists
 if [ ! -f "$KUBECONFIG_PATH" ]; then
-    echo -e "${RED}Lỗi: Không tìm thấy file kubeconfig tại: $KUBECONFIG_PATH${NC}"
-    echo -e "${YELLOW}Gợi ý: Đảm bảo bạn đã chạy Ansible ở Phase 1 để fetch file về máy local.${NC}"
+    echo -e "${RED}Error: Kubeconfig file not found at: $KUBECONFIG_PATH${NC}"
+    echo -e "${YELLOW}Suggestion: Ensure you have successfully fetched the file from the Master Node to the phase1-infrastructure/ansible directory.${NC}"
     exit 1
 fi
 
-# Hàm k thực thi lệnh qua file config đã liên kết
+# Wrapper function for kubectl with specified config and namespace
 k() {
     kubectl --kubeconfig="$KUBECONFIG_PATH" -n $NS "$@"
 }
 
 usage() {
-    echo -e "${YELLOW}Sử dụng: ./rollback.sh [mode] [app] [value]${NC}"
-    echo "Các mode hỗ trợ:"
-    echo "  history  : Xem lịch sử các bản cập nhật (Mode history)"
-    echo "  undo     : Quay lại phiên bản ngay trước đó (Mode undo)"
-    echo "  revision : Quay lại một phiên bản cụ thể (Mode revision - cần truyền ID)"
-    echo "  status   : Kiểm tra version/tag hiện tại của pod (Mode tag)"
+    echo -e "${YELLOW}Usage: ./rollback.sh [mode] [app_name] [revision_id]${NC}"
+    echo "Supported modes:"
+    echo "  history  : View deployment history (REVISION, CHANGE-CAUSE)"
+    echo "  undo     : Roll back to the immediate previous version"
+    echo "  revision : Roll back to a specific version (requires ID)"
+    echo "  status   : Check the current image tag running in the pod"
     exit 1
 }
 
+# Validate input parameters
+if [ -z "$1" ] || [ -z "$2" ]; then
+    usage
+fi
+
 case "$1" in
     history)
-        echo -e "${GREEN}==> Lịch sử triển khai của $2: ${NC}"
-        k rollout history deployment/$2
+        echo -e "${GREEN}==> Deployment history for $APP: ${NC}"
+        k rollout history deployment/$APP
         ;;
     undo)
-        echo -e "${YELLOW}==> Đang thực hiện Rollback bản cập nhật gần nhất cho $2...${NC}"
-        k rollout undo deployment/$2
+        echo -e "${YELLOW}==> Performing rollback to the latest stable update for $APP...${NC}"
+        k rollout undo deployment/$APP
         ;;
     revision)
-        if [ -z "$3" ]; then echo "Thiếu ID revision!"; exit 1; fi
-        echo -e "${YELLOW}==> Đang quay lại revision $3 cho $2...${NC}"
-        k rollout undo deployment/$2 --to-revision=$3
+        if [ -z "$3" ]; then echo -e "${RED}Error: Missing revision ID!${NC}"; exit 1; fi
+        echo -e "${YELLOW}==> Rolling back to revision $3 for $APP...${NC}"
+        k rollout undo deployment/$APP --to-revision=$3
         ;;
     status)
-        echo -e "${GREEN}==> Image tag hiện tại đang chạy: ${NC}"
-        k get pods -l app=$2 -o jsonpath='{.items[0].spec.containers[0].image}'
+        echo -e "${GREEN}==> Currently running image tag for $APP: ${NC}"
+        k get pods -l app=$APP -o jsonpath='{.items[0].spec.containers[0].image}'
         echo -e "\n"
         ;;
     *)
