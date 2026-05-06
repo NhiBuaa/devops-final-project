@@ -329,8 +329,8 @@ jobs:
           sed -i "s|image: .*backend:.*|image: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}|g" \
             phase2-k8s/backend/deployment.yaml
           
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "NhiBuaa"
+          git config --global user.email "nhihuynh210905@gmail.com"
           git add phase2-k8s/backend/deployment.yaml
           git commit -m "chore(cd): update backend image to ${{ env.IMAGE_TAG }} [skip ci]"
           git push https://x-access-token:${AD_TOKEN}@github.com/${{ github.repository }}.git HEAD:${{ github.ref_name }}
