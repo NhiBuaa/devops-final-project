@@ -9,6 +9,7 @@ metadata:
     project: devops-final
 spec:
   replicas: 2
+  revisionHistoryLimit: 5
   selector:
     matchLabels:
       app: backend
