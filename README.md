@@ -2,6 +2,9 @@
 
 This project implements a team member management application using an end-to-end DevOps workflow, including application development, Docker containerization, Kubernetes deployment, CI/CD automation, and monitoring infrastructure preparation.
 
+## Github Repo: https://github.com/NhiBuaa/devops-final-project
+## Video Demo: https://drive.google.com/drive/folders/18no3o_9HO8PgYL_mXtxzK179x0KiX8kY?usp=sharing
+
 ## 1. System Overview
 
 The application consists of 3 main components:
@@ -347,6 +350,7 @@ Deployment evidence:
 
 - `evidence/phase1-infrastructure/`
 - `evidence/phase2-k8s/`
+- `evidence/phase3-cicd/`
 
 ---
 
