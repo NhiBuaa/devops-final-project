@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { Member } from './types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://app.nhibuaa.space/api';
 
 export const api = axios.create({
     baseURL: API_URL,
