@@ -12,6 +12,7 @@ on:
     branches:
       - main
       - develop
+      - ci-backend
     paths:
       - "app/backend/**"
       - ".github/workflows/ci-backend.yml"
