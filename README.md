@@ -1,129 +1,190 @@
 # DevOps Final Project
 
-Dự án này triển khai một ứng dụng quản lý thành viên nhóm theo hướng DevOps end-to-end: phát triển ứng dụng, đóng gói bằng Docker, triển khai lên Kubernetes, tự động hóa CI/CD và chuẩn bị nền tảng monitoring.
+This project implements a team member management application using an end-to-end DevOps workflow, including application development, Docker containerization, Kubernetes deployment, CI/CD automation, and monitoring infrastructure preparation.
 
-## 1. Tổng quan hệ thống
+## 1. System Overview
 
-Ứng dụng gồm 3 thành phần chính:
+The application consists of 3 main components:
 
-- `frontend`: React + Vite + TypeScript, giao diện quản lý danh sách thành viên.
-- `backend`: Node.js + Express, cung cấp REST API CRUD cho thành viên.
-- `database`: PostgreSQL chạy dạng StatefulSet trên Kubernetes.
+- `frontend`: React + Vite + TypeScript, providing the team member management interface
+- `backend`: Node.js + Express, providing REST API CRUD operations for members
+- `database`: PostgreSQL running as a Kubernetes StatefulSet
 
-Luồng truy cập production:
+Production access flow:
 
-- Người dùng truy cập `https://app.nhibuaa.space`
-- Ingress route `/` vào frontend
-- Ingress route `/api` vào backend
-- Backend kết nối PostgreSQL qua service nội bộ `postgres-service`
+- Users access `https://app.nhibuaa.space`
+- Ingress routes `/` to the frontend
+- Ingress routes `/api` to the backend
+- Backend connects to PostgreSQL through the internal service `postgres-service`
 
 Monitoring domain:
 
 - Grafana: `https://grafana.nhibuaa.space`
 
-## 2. Tính năng chính
+---
 
-- CRUD thành viên nhóm: thêm, sửa, xóa, xem danh sách.
-- Frontend và backend containerized bằng Docker.
-- Triển khai production trên K3s.
-- Ingress + TLS với cert-manager.
-- HPA cho frontend và backend.
-- Rolling update và rollback khi deploy lỗi.
-- CI cho frontend và backend.
-- CD nhiều môi trường: staging -> manual approval -> production.
+## 2. Key Features
 
-## 3. Công nghệ sử dụng
+- Team member CRUD operations (create, update, delete, list)
+- Frontend and backend fully containerized with Docker
+- Production deployment on K3s
+- Ingress + TLS with cert-manager
+- Horizontal Pod Autoscaling (HPA) for frontend and backend
+- Rolling updates and rollback support
+- CI pipelines for frontend and backend
+- Multi-environment CD pipeline: staging → manual approval → production
 
-- Frontend: React 19, Vite, TypeScript, Tailwind CSS, Axios
-- Backend: Node.js, Express, PostgreSQL, CORS, dotenv
-- Container: Docker, Docker Hub
-- IaC và cấu hình máy chủ: Terraform, Ansible
-- Orchestration: K3s / Kubernetes
-- CI/CD: GitHub Actions
-- Monitoring: Prometheus, Grafana, Loki
-- Cloud: AWS EC2
+---
 
-## 4. Cấu trúc thư mục
+## 3. Technology Stack
+
+### Frontend
+- React 19
+- Vite
+- TypeScript
+- Tailwind CSS
+- Axios
+
+### Backend
+- Node.js
+- Express
+- PostgreSQL
+- CORS
+- dotenv
+
+### Infrastructure & Deployment
+- Docker
+- Docker Hub
+- Terraform
+- Ansible
+- K3s / Kubernetes
+- GitHub Actions
+
+### Monitoring
+- Prometheus
+- Grafana
+- Loki
+
+### Cloud Platform
+- AWS EC2
+
+---
+
+## 4. Project Structure
 
 ```text
 .
 ├── app/
-│   ├── backend/                  # API Node.js + Express
-│   ├── frontend/                 # UI React + Vite
-│   └── docker-compose.yml        # Chạy app container ở local
+│   ├── backend/                  # Node.js + Express API
+│   ├── frontend/                 # React + Vite UI
+│   └── docker-compose.yml        # Local containerized application
 ├── phase1-infrastructure/
-│   ├── terraform/                # Tạo EC2, security group, inventory
-│   ├── ansible/                  # Cài K3s, ingress, cert-manager, monitoring
-│   └── test-idempotency.sh       # Kiểm tra idempotency
+│   ├── terraform/                # EC2 provisioning, security groups, inventory
+│   ├── ansible/                  # K3s, ingress, cert-manager, monitoring setup
+│   └── test-idempotency.sh       # Idempotency verification
 ├── phase2-k8s/                   # Namespace, deployments, services, ingress, HPA
-├── phase3-cicd/                  # Rollback script, tài liệu deploy, cấu hình phụ trợ
-├── phase4-monitoring/            # Prometheus, Grafana, Loki
+├── phase3-cicd/                  # Rollback scripts, deployment docs, helpers
+├── phase4-monitoring/            # Prometheus, Grafana, Loki configuration
 ├── .github/workflows/            # CI/CD pipelines
-├── docs/                         # Tài liệu contract hệ thống
-└── evidence/                     # Ảnh/chứng cứ cho các phase
+├── docs/                         # System contract documentation
+└── evidence/                     # Screenshots and deployment evidence
 ```
 
-## 5. Kiến trúc triển khai
+---
+
+## 5. Deployment Architecture
 
 ### Phase 1 - Infrastructure
 
-- Terraform tạo 2 EC2:
+Terraform provisions:
+
+- 2 EC2 instances:
   - 1 master node
   - 1 worker node
-- Gán Elastic IP cho master
-- Sinh inventory cho Ansible
-- Ansible cài:
-  - cấu hình chung cho node
-  - K3s master/worker
-  - Helm tools
-  - cert-manager
-  - monitoring stack
+
+Additional infrastructure:
+
+- Elastic IP assigned to master node
+- Ansible inventory generated automatically
+
+Ansible installs:
+
+- Common node configuration
+- K3s master/worker cluster
+- Helm tools
+- cert-manager
+- Monitoring stack
+
+---
 
 ### Phase 2 - Kubernetes
 
-- Namespace production
+Deployment includes:
+
+- Production namespace
 - PostgreSQL StatefulSet + persistent volume
 - Backend Deployment + Service + HPA
 - Frontend Deployment + Service + HPA
-- Ingress cho domain production
-- TLS certificate với Let's Encrypt
+- Production Ingress
+- TLS certificates via Let's Encrypt
+
+---
 
 ### Phase 3 - CI/CD
 
-- `ci-frontend.yml`
-  - cài dependencies
-  - lint
-  - build
-  - scan Trivy
-  - build/push Docker image khi push lên `main` hoặc `develop`
+#### `ci-frontend.yml`
 
-- `ci-backend.yml`
-  - lint
-  - test
-  - SAST scan bằng Trivy
-  - build app
-  - build/push Docker image
-  - cập nhật image tag trong manifest K8s
+Pipeline steps:
 
-- `cd.yml`
-  - trigger sau khi CI thành công hoặc chạy manual
-  - deploy `staging`
-  - health check
-  - chờ manual approval
-  - deploy `production`
-  - auto rollback nếu rollout/health check thất bại
+- Install dependencies
+- Lint
+- Build
+- Trivy scan
+- Build and push Docker image when pushing to `main` or `develop`
+
+---
+
+#### `ci-backend.yml`
+
+Pipeline steps:
+
+- Lint
+- Test
+- Trivy SAST scan
+- Build application
+- Build and push Docker image
+- Update image tags in Kubernetes manifests
+
+---
+
+#### `cd.yml`
+
+Pipeline flow:
+
+- Triggered after successful CI or manually
+- Deploy to `staging`
+- Run health checks
+- Wait for manual approval
+- Deploy to `production`
+- Auto rollback if rollout or health checks fail
+
+---
 
 ### Phase 4 - Monitoring
 
-- Có thư mục cấu hình cho:
-  - Prometheus
-  - Grafana
-  - Loki
-- Có dashboard và evidence phục vụ quan sát hệ thống production
+Configuration directories provided for:
 
-## 6. API hiện tại
+- Prometheus
+- Grafana
+- Loki
 
-Backend đang cung cấp các endpoint:
+Includes dashboards and deployment evidence for production observability.
+
+---
+
+## 6. Current API Endpoints
+
+The backend currently exposes:
 
 - `GET /health`
 - `GET /api/members`
@@ -131,7 +192,7 @@ Backend đang cung cấp các endpoint:
 - `PUT /api/members/:id`
 - `DELETE /api/members/:id`
 
-Ví dụ payload tạo/cập nhật thành viên:
+Example member payload:
 
 ```json
 {
@@ -140,7 +201,9 @@ Ví dụ payload tạo/cập nhật thành viên:
 }
 ```
 
-## 7. Biến môi trường quan trọng
+---
+
+## 7. Important Environment Variables
 
 ### Backend
 
@@ -159,11 +222,13 @@ CORS_ORIGIN=*
 VITE_API_URL=https://app.nhibuaa.space/api
 ```
 
-## 8. Chạy dự án ở local
+---
 
-### Cách 1 - Chạy frontend/backend riêng
+## 8. Running Locally
 
-Backend:
+### Option 1 - Run frontend/backend separately
+
+#### Backend
 
 ```bash
 cd app/backend
@@ -171,7 +236,7 @@ npm ci
 node index.js
 ```
 
-Frontend:
+#### Frontend
 
 ```bash
 cd app/frontend
@@ -179,30 +244,34 @@ npm ci
 npm run dev
 ```
 
-Lưu ý:
+Notes:
 
-- Frontend mặc định gọi API qua `VITE_API_URL`
-- Nếu chạy local hoàn toàn, nên tạo `.env` cho frontend:
+- Frontend calls API through `VITE_API_URL`
+- For full local execution, create a frontend `.env` file:
 
 ```env
 VITE_API_URL=http://localhost:8080/api
 ```
 
-### Cách 2 - Chạy bằng Docker Compose
+---
+
+### Option 2 - Run using Docker Compose
 
 ```bash
 cd app
 docker compose up --build
 ```
 
-Mặc định file compose hiện tại chạy:
+Current compose file exposes:
 
-- frontend tại port `80`
-- backend tại port `8080`
+- Frontend on port `80`
+- Backend on port `8080`
 
-## 9. Triển khai hạ tầng và ứng dụng
+---
 
-### 9.1. Tạo hạ tầng bằng Terraform
+## 9. Infrastructure and Application Deployment
+
+### 9.1 Provision infrastructure with Terraform
 
 ```bash
 cd phase1-infrastructure/terraform
@@ -211,27 +280,33 @@ terraform plan
 terraform apply
 ```
 
-### 9.2. Cấu hình cluster bằng Ansible
+---
+
+### 9.2 Configure cluster with Ansible
 
 ```bash
 cd phase1-infrastructure/ansible
 ansible-playbook -i inventory/hosts.ini site.yml
 ```
 
-### 9.3. Deploy ứng dụng lên Kubernetes
+---
+
+### 9.3 Deploy application to Kubernetes
 
 ```bash
 cd phase2-k8s
 ./deploy.sh
 ```
 
-## 10. Rollback thủ công
+---
 
-Script rollback nằm tại:
+## 10. Manual Rollback
+
+Rollback script location:
 
 - `phase3-cicd/rollback.sh`
 
-Một số ví dụ:
+Examples:
 
 ```bash
 ./phase3-cicd/rollback.sh production history
@@ -240,9 +315,11 @@ Một số ví dụ:
 ./phase3-cicd/rollback.sh production tag <dockerhub_user> <commit_sha>
 ```
 
-## 11. CI/CD secrets cần có
+---
 
-Để pipeline hoạt động đầy đủ, repo cần chuẩn bị các GitHub Secrets như:
+## 11. Required CI/CD Secrets
+
+The repository requires the following GitHub Secrets:
 
 - `DOCKER_USERNAME`
 - `DOCKER_TOKEN`
@@ -258,25 +335,35 @@ Một số ví dụ:
 - `MY_GIT_TOKEN`
 - `VITE_API_URL`
 
-## 12. Bằng chứng và tài liệu
+---
 
-- Tài liệu contract hệ thống: `docs/contract.md`
-- Ảnh minh chứng:
-  - `evidence/phase1-infrastructure/`
-  - `evidence/phase2-k8s/`
+## 12. Evidence and Documentation
 
-## 13. Điểm cần lưu ý
+System contract documentation:
 
-- `README.md` này mô tả theo trạng thái repo hiện tại.
-- Một số workflow đang tham chiếu tới tên image/tag hơi khác nhau giữa frontend và backend, vì vậy khi demo nên kiểm tra lại manifest/image convention trước khi chạy production.
-- File `app/docker-compose.yml` hiện chưa bao gồm PostgreSQL, nên cách chạy local bằng compose phù hợp nhất khi backend không phụ thuộc DB hoặc khi DB đã có sẵn bên ngoài.
+- `docs/contract.md`
 
-## 14. Tác giả
+Deployment evidence:
 
-Đồ án phục vụ mục tiêu thực hành DevOps:
+- `evidence/phase1-infrastructure/`
+- `evidence/phase2-k8s/`
 
-- xây dựng ứng dụng mẫu
-- tự động hóa hạ tầng
-- triển khai Kubernetes
-- thiết kế CI/CD pipeline
-- chuẩn bị giám sát và vận hành production
+---
+
+## 13. Notes
+
+- This `README.md` reflects the repository's current state
+- Some workflows reference slightly different image/tag naming conventions between frontend and backend; verify manifests before production deployment
+- The current `app/docker-compose.yml` does not include PostgreSQL, so local compose execution is most suitable when backend does not depend on the database or when an external database is already available
+
+---
+
+## 14. Author
+
+This project was developed for DevOps practice purposes, including:
+
+- Building a sample application
+- Infrastructure automation
+- Kubernetes deployment
+- CI/CD pipeline design
+- Production monitoring and operations preparation
