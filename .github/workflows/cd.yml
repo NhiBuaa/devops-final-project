@@ -398,18 +398,18 @@ jobs:
           echo "Chờ 45s cho production stable..."
           sleep 45
 
-          TOTAL_PODS=$(kubectl get pods -n production --no-headers | wc -l)
-          RUNNING_PODS=$(kubectl get pods -n production \
-            --field-selector=status.phase=Running --no-headers | wc -l)
+          # Logic thông minh: Loại bỏ các Pod đang Running hoặc đã Completed thành công
+          NOT_READY=$(kubectl get pods -n production --no-headers | grep -v "Running" | grep -v "Completed" | wc -l)
 
-          echo "Pods: $RUNNING_PODS/$TOTAL_PODS Running"
-
-          if [ "$RUNNING_PODS" -lt "$TOTAL_PODS" ]; then
-            echo "Not all pods are Running ($RUNNING_PODS/$TOTAL_PODS)"
+          if [ "$NOT_READY" -gt "0" ]; then
+            echo "CẢNH BÁO: Có $NOT_READY pod(s) đang ở trạng thái lỗi hoặc chưa sẵn sàng!"
             kubectl get pods -n production
             exit 1
           fi
 
+          echo "Kiểm tra trạng thái Pods: OK"
+
+          # Kiểm tra endpoint thực tế qua HTTP
           for i in 1 2 3; do
             HTTP_STATUS=$(curl -sk -o /dev/null -w "%{http_code}" \
               https://app.nhibuaa.space/healthz || echo "000")
@@ -417,12 +417,12 @@ jobs:
               echo "Health check $i/3 PASSED (HTTP $HTTP_STATUS)"
               break
             fi
-            echo "Health check $i/3: HTTP $HTTP_STATUS — retrying in 15s..."
+            echo "Health check $i/3: HTTP $HTTP_STATUS — đang thử lại sau 15s..."
             sleep 15
           done
 
           if [ "$HTTP_STATUS" != "200" ]; then
-            echo "Production health check FAILED after 3 attempts!"
+            echo "Production health check THẤT BẠI sau 3 lần thử!"
             exit 1
           fi
 
