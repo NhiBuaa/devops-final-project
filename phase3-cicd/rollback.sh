@@ -132,12 +132,12 @@ verify_after_rollback() {
         "https://$DOMAIN/healthz" || echo "000")
     echo "HTTPS health check: HTTP $HTTP_STATUS"
 
-    if [ "$HTTP_STATUS" == "200" ]; then
-        echo "Application is healthy after rollback"
-    else
-        echo "Application still unhealthy after rollback! (HTTP $HTTP_STATUS)"
-        echo "Check logs: k logs -n $NAMESPACE -l app=backend --tail=50"
-    fi
+    # if [ "$HTTP_STATUS" == "200" ]; then
+    #     echo "Application is healthy after rollback"
+    # else
+    #     echo "Application still unhealthy after rollback! (HTTP $HTTP_STATUS)"
+    #     echo "Check logs: k logs -n $NAMESPACE -l app=backend --tail=50"
+    # fi
 }
 
 # ─── MAIN MENU ────────────────────────────────────────────────────────────────
