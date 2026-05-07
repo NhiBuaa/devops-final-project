@@ -54,7 +54,7 @@ spec:
 
       containers:
         - name: backend
-          image: thongchau/final-devops-backend:997dd35df8c56c9749f7f6fe987f9b9c275a780d
+          image: thongchau/final-devops-backend:fc519e2fd10d8af6e9ca1f01b906a78f23ec4142
           imagePullPolicy: Always
 
           ports:
