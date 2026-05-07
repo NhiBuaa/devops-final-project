@@ -198,7 +198,7 @@ jobs:
       # ── Apply Ingress (staging domain) ────────────────────────────────────
       - name: "Apply Ingress (staging)"
         run: |
-          # Dùng file ingress riêng biệt cho staging
+          # Override domain cho staging bằng sed
           kubectl apply -f phase2-k8s/ingress/ingress-staging.yaml -n staging
 
       # ── Health Check sau deploy ────────────────────────────────────────────
