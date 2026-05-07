@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: frontend-container
-        image: thongchau/final-devops-frontend:IMAGE_TAG
+        image: thongchau/final-devops-frontend:latest
         ports:
         - containerPort: 80
         
