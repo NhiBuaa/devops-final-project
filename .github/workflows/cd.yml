@@ -208,9 +208,9 @@ jobs:
           echo "Chờ 30s cho Ingress và cert-manager xử lý..."
           sleep 30
 
-          NOT_READY=$(kubectl get pods -n staging \
-            --field-selector=status.phase!=Running \
-            --no-headers 2>/dev/null | wc -l)
+          # Kiểm tra tất cả pods đang Running
+          # Chỉ đếm những Pod đang ở trạng thái lỗi hoặc bị kẹt (không phải Running và cũng không phải Succeeded)
+          NOT_READY=$(kubectl get pods -n staging --no-headers | grep -v "Running" | grep -v "Completed" | wc -l)
 
           if [ "$NOT_READY" -gt "0" ]; then
             echo "Có $NOT_READY pod(s) chưa Running!"
