@@ -20,7 +20,7 @@ const pool = new Pool({
 });
 
 // Kiểm tra kết nối DB khi khởi động
-pool.on('connect', () => console.log('Connected to PostgreSQL'));
+pool.on('connect', () => console.log('   -Connected to PostgreSQL'));
 
 // 1. Health Check (Dành cho K8s Liveness/Readiness Probe)
 app.get('/health', (req, res) => {
