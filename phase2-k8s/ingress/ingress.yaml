@@ -2,7 +2,6 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: main-ingress
-  namespace: production
   labels:
     app: ingress
     project: devops-final
@@ -45,7 +44,6 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: monitoring-ingress
-  namespace: monitoring
   labels:
     project: devops-final
   annotations:
