@@ -35,6 +35,30 @@ spec:
             secretKeyRef:
               name: backend-secret
               key: DB_PASSWORD
+              
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - exec pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" -h 127.0.0.1 -p 5432
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          
+        # -- BỔ SUNG: Kiểm tra xem Pod có bị treo trong quá trình chạy không
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - exec pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" -h 127.0.0.1 -p 5432
+          initialDelaySeconds: 30
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 5
+          
         volumeMounts:
         - name: postgres-storage
           mountPath: /var/lib/postgresql/data

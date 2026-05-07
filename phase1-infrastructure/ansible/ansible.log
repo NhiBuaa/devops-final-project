@@ -1,0 +1,308 @@
+2026-05-07 11:19:31,184 p=17107 u=nhibuaa n=ansible WARNING| [WARNING]: Unable to parse /home/nhibuaa/devops-final-project/phase1-infrastructure/ansible/inventory/hosts.init as an inventory source
+
+2026-05-07 11:19:31,184 p=17107 u=nhibuaa n=ansible WARNING| [WARNING]: No inventory was parsed, only implicit localhost is available
+
+2026-05-07 11:19:31,195 p=17107 u=nhibuaa n=ansible WARNING| [WARNING]: provided hosts list is empty, only localhost is available. Note that the implicit localhost does not match 'all'
+
+2026-05-07 11:19:31,504 p=17107 u=nhibuaa n=ansible ERROR| [ERROR]: 'ansible.builtin.stat' is not a valid attribute for a Play
+Origin: /home/nhibuaa/devops-final-project/phase1-infrastructure/ansible/roles/k3s-worker/tasks/main.yml:8:3
+
+6
+7 - name: "[K3S-WORKER] Check if K3s agent is already installed"
+8   ansible.builtin.stat:
+    ^ column 3
+
+
+2026-05-07 11:19:47,228 p=17818 u=nhibuaa n=ansible INFO| PLAY [PLAY 1 - Common Configuration for All Nodes] **************************************************
+2026-05-07 11:19:47,252 p=17818 u=nhibuaa n=ansible INFO| TASK [Gathering Facts] ******************************************************************************
+2026-05-07 11:19:47,253 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:19:47 +0700 (0:00:00.032)       0:00:00.032 ********** 
+2026-05-07 11:19:50,868 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:19:51,398 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1]
+2026-05-07 11:19:51,405 p=17818 u=nhibuaa n=ansible INFO| TASK [common : [COMMON] Update apt cache] ***********************************************************
+2026-05-07 11:19:51,405 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:19:51 +0700 (0:00:04.152)       0:00:04.185 ********** 
+2026-05-07 11:19:56,507 p=17818 u=nhibuaa n=ansible INFO| changed: [master]
+2026-05-07 11:19:57,707 p=17818 u=nhibuaa n=ansible INFO| changed: [worker-1]
+2026-05-07 11:19:57,714 p=17818 u=nhibuaa n=ansible INFO| TASK [common : [COMMON] Install required system packages] *******************************************
+2026-05-07 11:19:57,714 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:19:57 +0700 (0:00:06.308)       0:00:10.494 ********** 
+2026-05-07 11:19:58,843 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:19:58,951 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1]
+2026-05-07 11:19:58,958 p=17818 u=nhibuaa n=ansible INFO| TASK [common : [COMMON] Set timezone to Asia/Ho_Chi_Minh] *******************************************
+2026-05-07 11:19:58,958 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:19:58 +0700 (0:00:01.243)       0:00:11.738 ********** 
+2026-05-07 11:19:59,768 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:19:59,998 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1]
+2026-05-07 11:20:00,013 p=17818 u=nhibuaa n=ansible INFO| TASK [common : [COMMON] Disable swap (required for Kubernetes)] *************************************
+2026-05-07 11:20:00,013 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:00 +0700 (0:00:01.055)       0:00:12.793 ********** 
+2026-05-07 11:20:00,655 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:00,724 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1]
+2026-05-07 11:20:00,731 p=17818 u=nhibuaa n=ansible INFO| TASK [common : [COMMON] Ensure swap is disabled in /etc/fstab] **************************************
+2026-05-07 11:20:00,731 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:00 +0700 (0:00:00.717)       0:00:13.511 ********** 
+2026-05-07 11:20:01,331 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:01,406 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1]
+2026-05-07 11:20:01,412 p=17818 u=nhibuaa n=ansible INFO| TASK [common : [COMMON] Load required kernel modules] ***********************************************
+2026-05-07 11:20:01,412 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:01 +0700 (0:00:00.681)       0:00:14.192 ********** 
+2026-05-07 11:20:02,043 p=17818 u=nhibuaa n=ansible INFO| ok: [master] => (item=br_netfilter)
+2026-05-07 11:20:02,118 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1] => (item=br_netfilter)
+2026-05-07 11:20:02,445 p=17818 u=nhibuaa n=ansible INFO| ok: [master] => (item=overlay)
+2026-05-07 11:20:02,583 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1] => (item=overlay)
+2026-05-07 11:20:02,590 p=17818 u=nhibuaa n=ansible INFO| TASK [common : [COMMON] Ensure kernel modules persist across reboots] *******************************
+2026-05-07 11:20:02,590 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:02 +0700 (0:00:01.177)       0:00:15.369 ********** 
+2026-05-07 11:20:03,225 p=17818 u=nhibuaa n=ansible INFO| ok: [master] => (item=br_netfilter)
+2026-05-07 11:20:03,278 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1] => (item=br_netfilter)
+2026-05-07 11:20:03,624 p=17818 u=nhibuaa n=ansible INFO| ok: [master] => (item=overlay)
+2026-05-07 11:20:03,769 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1] => (item=overlay)
+2026-05-07 11:20:03,778 p=17818 u=nhibuaa n=ansible INFO| TASK [common : [COMMON] Set kernel parameters for Kubernetes networking] ****************************
+2026-05-07 11:20:03,779 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:03 +0700 (0:00:01.188)       0:00:16.558 ********** 
+2026-05-07 11:20:04,525 p=17818 u=nhibuaa n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-05-07 11:20:04,526 p=17818 u=nhibuaa n=ansible INFO| [DEPRECATION WARNING]: Importing 'to_native' from 'ansible.module_utils._text' is deprecated. This feature will be removed from ansible-core version 2.24. Use ansible.module_utils.common.text.converters instead.
+
+2026-05-07 11:20:04,526 p=17818 u=nhibuaa n=ansible INFO| ok: [master] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
+2026-05-07 11:20:04,590 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
+2026-05-07 11:20:04,954 p=17818 u=nhibuaa n=ansible INFO| ok: [master] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
+2026-05-07 11:20:05,112 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
+2026-05-07 11:20:05,393 p=17818 u=nhibuaa n=ansible INFO| ok: [master] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
+2026-05-07 11:20:05,618 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
+2026-05-07 11:20:05,627 p=17818 u=nhibuaa n=ansible INFO| TASK [common : [COMMON] Configure UFW - allow internal VPC traffic] *********************************
+2026-05-07 11:20:05,627 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:05 +0700 (0:00:01.848)       0:00:18.407 ********** 
+2026-05-07 11:20:06,681 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:06,777 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1]
+2026-05-07 11:20:06,783 p=17818 u=nhibuaa n=ansible INFO| TASK [common : [COMMON] Configure UFW - allow specific external ports] ******************************
+2026-05-07 11:20:06,783 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:06 +0700 (0:00:01.156)       0:00:19.563 ********** 
+2026-05-07 11:20:07,594 p=17818 u=nhibuaa n=ansible INFO| ok: [master] => (item={'port': 22, 'proto': 'tcp', 'comment': 'SSH'})
+2026-05-07 11:20:07,732 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1] => (item={'port': 22, 'proto': 'tcp', 'comment': 'SSH'})
+2026-05-07 11:20:08,352 p=17818 u=nhibuaa n=ansible INFO| ok: [master] => (item={'port': 80, 'proto': 'tcp', 'comment': 'HTTP'})
+2026-05-07 11:20:08,606 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1] => (item={'port': 80, 'proto': 'tcp', 'comment': 'HTTP'})
+2026-05-07 11:20:09,122 p=17818 u=nhibuaa n=ansible INFO| ok: [master] => (item={'port': 443, 'proto': 'tcp', 'comment': 'HTTPS'})
+2026-05-07 11:20:09,484 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1] => (item={'port': 443, 'proto': 'tcp', 'comment': 'HTTPS'})
+2026-05-07 11:20:09,883 p=17818 u=nhibuaa n=ansible INFO| ok: [master] => (item={'port': 6443, 'proto': 'tcp', 'comment': 'Kubernetes API Server'})
+2026-05-07 11:20:10,352 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1] => (item={'port': 6443, 'proto': 'tcp', 'comment': 'Kubernetes API Server'})
+2026-05-07 11:20:10,654 p=17818 u=nhibuaa n=ansible INFO| ok: [master] => (item={'port': 8472, 'proto': 'udp', 'comment': 'K3s Flannel VXLAN'})
+2026-05-07 11:20:11,240 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1] => (item={'port': 8472, 'proto': 'udp', 'comment': 'K3s Flannel VXLAN'})
+2026-05-07 11:20:11,441 p=17818 u=nhibuaa n=ansible INFO| ok: [master] => (item={'port': 10250, 'proto': 'tcp', 'comment': 'Kubelet metrics'})
+2026-05-07 11:20:12,129 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1] => (item={'port': 10250, 'proto': 'tcp', 'comment': 'Kubelet metrics'})
+2026-05-07 11:20:12,201 p=17818 u=nhibuaa n=ansible INFO| ok: [master] => (item={'port': 9090, 'proto': 'tcp', 'comment': 'Prometheus'})
+2026-05-07 11:20:12,974 p=17818 u=nhibuaa n=ansible INFO| ok: [master] => (item={'port': 32000, 'proto': 'tcp', 'comment': 'Grafana'})
+2026-05-07 11:20:13,009 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1] => (item={'port': 9090, 'proto': 'tcp', 'comment': 'Prometheus'})
+2026-05-07 11:20:13,729 p=17818 u=nhibuaa n=ansible INFO| ok: [master] => (item={'port': '30000:32767', 'proto': 'tcp', 'comment': 'NodePort range'})
+2026-05-07 11:20:13,910 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1] => (item={'port': 32000, 'proto': 'tcp', 'comment': 'Grafana'})
+2026-05-07 11:20:14,789 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1] => (item={'port': '30000:32767', 'proto': 'tcp', 'comment': 'NodePort range'})
+2026-05-07 11:20:14,801 p=17818 u=nhibuaa n=ansible INFO| TASK [common : [COMMON] Enable UFW with default deny incoming] **************************************
+2026-05-07 11:20:14,801 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:14 +0700 (0:00:08.017)       0:00:27.580 ********** 
+2026-05-07 11:20:16,771 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:16,957 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1]
+2026-05-07 11:20:16,963 p=17818 u=nhibuaa n=ansible INFO| TASK [common : [COMMON] Set hostname correctly] *****************************************************
+2026-05-07 11:20:16,963 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:16 +0700 (0:00:02.162)       0:00:29.742 ********** 
+2026-05-07 11:20:18,269 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:18,581 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1]
+2026-05-07 11:20:18,587 p=17818 u=nhibuaa n=ansible INFO| TASK [common : [COMMON] Update /etc/hosts with hostname] ********************************************
+2026-05-07 11:20:18,587 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:18 +0700 (0:00:01.624)       0:00:31.367 ********** 
+2026-05-07 11:20:19,062 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:19,167 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1]
+2026-05-07 11:20:19,190 p=17818 u=nhibuaa n=ansible INFO| TASK [[POST] Confirm common setup complete on master] ***********************************************
+2026-05-07 11:20:19,190 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:19 +0700 (0:00:00.602)       0:00:31.970 ********** 
+2026-05-07 11:20:19,217 p=17818 u=nhibuaa n=ansible INFO| ok: [master] => {
+    "msg": "Common configuration complete on master (54.251.123.127)"
+}
+2026-05-07 11:20:19,233 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1] => {
+    "msg": "Common configuration complete on worker-1 (52.74.115.152)"
+}
+2026-05-07 11:20:19,237 p=17818 u=nhibuaa n=ansible INFO| PLAY [PLAY 2 - Install K3s Master (Control Plane)] **************************************************
+2026-05-07 11:20:19,256 p=17818 u=nhibuaa n=ansible INFO| TASK [Gathering Facts] ******************************************************************************
+2026-05-07 11:20:19,256 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:19 +0700 (0:00:00.066)       0:00:32.036 ********** 
+2026-05-07 11:20:21,510 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:21,517 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-master : [K3S-MASTER] Check if K3s is already installed] **********************************
+2026-05-07 11:20:21,517 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:21 +0700 (0:00:02.261)       0:00:34.297 ********** 
+2026-05-07 11:20:22,631 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:22,638 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-master : [K3S-MASTER] Check current K3s version (if installed)] ***************************
+2026-05-07 11:20:22,639 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:22 +0700 (0:00:01.121)       0:00:35.418 ********** 
+2026-05-07 11:20:23,128 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:23,135 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-master : [K3S-MASTER] Download K3s installer script] **************************************
+2026-05-07 11:20:23,136 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:23 +0700 (0:00:00.497)       0:00:35.915 ********** 
+2026-05-07 11:20:24,042 p=17818 u=nhibuaa n=ansible INFO| changed: [master]
+2026-05-07 11:20:24,049 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-master : [K3S-MASTER] Install K3s server (Control Plane)] *********************************
+2026-05-07 11:20:24,049 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:24 +0700 (0:00:00.913)       0:00:36.828 ********** 
+2026-05-07 11:20:24,073 p=17818 u=nhibuaa n=ansible INFO| skipping: [master]
+2026-05-07 11:20:24,080 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-master : [K3S-MASTER] Wait for K3s service to be active] **********************************
+2026-05-07 11:20:24,080 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:24 +0700 (0:00:00.031)       0:00:36.860 ********** 
+2026-05-07 11:20:25,147 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:25,153 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-master : [K3S-MASTER] Wait for K3s API server to be ready] ********************************
+2026-05-07 11:20:25,153 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:25 +0700 (0:00:01.072)       0:00:37.933 ********** 
+2026-05-07 11:20:35,754 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:35,760 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-master : [K3S-MASTER] Wait for node to be Ready] ******************************************
+2026-05-07 11:20:35,760 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:35 +0700 (0:00:10.606)       0:00:48.539 ********** 
+2026-05-07 11:20:36,497 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:36,505 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-master : [K3S-MASTER] Ensure .kube directory exists] **************************************
+2026-05-07 11:20:36,505 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:36 +0700 (0:00:00.745)       0:00:49.285 ********** 
+2026-05-07 11:20:37,139 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:37,183 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-master : [K3S-MASTER] Copy kubeconfig for ubuntu user] ************************************
+2026-05-07 11:20:37,184 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:37 +0700 (0:00:00.678)       0:00:49.963 ********** 
+2026-05-07 11:20:38,001 p=17818 u=nhibuaa n=ansible INFO| changed: [master]
+2026-05-07 11:20:38,008 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-master : [K3S-MASTER] Update kubeconfig server address to public IP] **********************
+2026-05-07 11:20:38,008 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:37 +0700 (0:00:00.824)       0:00:50.788 ********** 
+2026-05-07 11:20:38,419 p=17818 u=nhibuaa n=ansible INFO| changed: [master]
+2026-05-07 11:20:38,427 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-master : [K3S-MASTER] Add KUBECONFIG to ubuntu user's .bashrc] ****************************
+2026-05-07 11:20:38,427 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:38 +0700 (0:00:00.418)       0:00:51.206 ********** 
+2026-05-07 11:20:38,835 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:38,843 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-master : [K3S-MASTER] Add kubectl autocomplete to .bashrc] ********************************
+2026-05-07 11:20:38,843 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:38 +0700 (0:00:00.416)       0:00:51.623 ********** 
+2026-05-07 11:20:39,379 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:39,385 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-master : [K3S-MASTER] Read K3s node token] ************************************************
+2026-05-07 11:20:39,386 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:39 +0700 (0:00:00.542)       0:00:52.165 ********** 
+2026-05-07 11:20:39,923 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:39,941 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-master : [K3S-MASTER] Set K3s token fact (share với worker nodes)] ************************
+2026-05-07 11:20:39,941 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:39 +0700 (0:00:00.555)       0:00:52.721 ********** 
+2026-05-07 11:20:39,990 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:39,996 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-master : [K3S-MASTER] Create local directory for kubeconfig] ******************************
+2026-05-07 11:20:39,996 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:39 +0700 (0:00:00.054)       0:00:52.776 ********** 
+2026-05-07 11:20:40,310 p=17818 u=nhibuaa n=ansible INFO| ok: [master -> localhost]
+2026-05-07 11:20:40,319 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-master : [K3S-MASTER] Fetch kubeconfig from master to local machine] **********************
+2026-05-07 11:20:40,319 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:40 +0700 (0:00:00.322)       0:00:53.099 ********** 
+2026-05-07 11:20:40,777 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:40,784 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-master : [K3S-MASTER] Replace server address in local kubeconfig with public IP] **********
+2026-05-07 11:20:40,784 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:40 +0700 (0:00:00.465)       0:00:53.564 ********** 
+2026-05-07 11:20:41,115 p=17818 u=nhibuaa n=ansible INFO| ok: [master -> localhost]
+2026-05-07 11:20:41,121 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-master : [K3S-MASTER] Set secure permissions on local kubeconfig] *************************
+2026-05-07 11:20:41,121 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:41 +0700 (0:00:00.336)       0:00:53.901 ********** 
+2026-05-07 11:20:41,454 p=17818 u=nhibuaa n=ansible INFO| ok: [master -> localhost]
+2026-05-07 11:20:41,461 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-master : [K3S-MASTER] Confirm local kubeconfig path] **************************************
+2026-05-07 11:20:41,461 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:41 +0700 (0:00:00.340)       0:00:54.241 ********** 
+2026-05-07 11:20:41,480 p=17818 u=nhibuaa n=ansible INFO| ok: [master -> localhost] => {
+    "msg": "Kubeconfig đã được lưu về local tại: /home/nhibuaa/devops-final-project/phase1-infrastructure/ansible/kubeconfig\n   Dùng lệnh sau để kết nối cluster từ máy local:\n   export KUBECONFIG=/home/nhibuaa/devops-final-project/phase1-infrastructure/ansible/kubeconfig\n   kubectl get nodes\n"
+}
+2026-05-07 11:20:41,491 p=17818 u=nhibuaa n=ansible INFO| TASK [[POST] K3s Master setup complete] *************************************************************
+2026-05-07 11:20:41,492 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:41 +0700 (0:00:00.030)       0:00:54.271 ********** 
+2026-05-07 11:20:41,510 p=17818 u=nhibuaa n=ansible INFO| ok: [master] => {
+    "msg": "K3s Master node ready at https://54.251.123.127:6443"
+}
+2026-05-07 11:20:41,514 p=17818 u=nhibuaa n=ansible INFO| PLAY [PLAY 3 - Join K3s Worker Nodes to Cluster] ****************************************************
+2026-05-07 11:20:41,525 p=17818 u=nhibuaa n=ansible INFO| TASK [Gathering Facts] ******************************************************************************
+2026-05-07 11:20:41,526 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:41 +0700 (0:00:00.033)       0:00:54.305 ********** 
+2026-05-07 11:20:43,150 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1]
+2026-05-07 11:20:43,158 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-worker : [K3S-WORKER] Check if K3s agent is already installed] ****************************
+2026-05-07 11:20:43,159 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:43 +0700 (0:00:01.633)       0:00:55.938 ********** 
+2026-05-07 11:20:44,034 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1]
+2026-05-07 11:20:44,041 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-worker : [K3S-WORKER] Check if node is already joined to cluster] *************************
+2026-05-07 11:20:44,042 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:44 +0700 (0:00:00.882)       0:00:56.821 ********** 
+2026-05-07 11:20:44,553 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1]
+2026-05-07 11:20:44,562 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-worker : [K3S-WORKER] Get master node token from master] **********************************
+2026-05-07 11:20:44,562 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:44 +0700 (0:00:00.520)       0:00:57.342 ********** 
+2026-05-07 11:20:44,589 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1]
+2026-05-07 11:20:44,597 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-worker : [K3S-WORKER] Download K3s installer script] **************************************
+2026-05-07 11:20:44,597 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:44 +0700 (0:00:00.034)       0:00:57.377 ********** 
+2026-05-07 11:20:45,300 p=17818 u=nhibuaa n=ansible INFO| changed: [worker-1]
+2026-05-07 11:20:45,308 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-worker : [K3S-WORKER] Install K3s agent and join cluster] *********************************
+2026-05-07 11:20:45,309 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:45 +0700 (0:00:00.711)       0:00:58.088 ********** 
+2026-05-07 11:20:50,864 p=17818 u=nhibuaa n=ansible INFO| changed: [worker-1]
+2026-05-07 11:20:50,871 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-worker : [K3S-WORKER] Ensure K3s agent service is started and enabled] ********************
+2026-05-07 11:20:50,871 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:50 +0700 (0:00:05.562)       0:01:03.650 ********** 
+2026-05-07 11:20:52,321 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1]
+2026-05-07 11:20:52,331 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-worker : [K3S-WORKER] Wait for worker node to be visible on master] ***********************
+2026-05-07 11:20:52,331 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:52 +0700 (0:00:01.460)       0:01:05.111 ********** 
+2026-05-07 11:20:52,981 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1 -> master(54.251.123.127)]
+2026-05-07 11:20:52,988 p=17818 u=nhibuaa n=ansible INFO| TASK [k3s-worker : [K3S-WORKER] Show worker node status] ********************************************
+2026-05-07 11:20:52,989 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:52 +0700 (0:00:00.657)       0:01:05.768 ********** 
+2026-05-07 11:20:53,010 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1] => {
+    "msg": "Worker node worker-1 status: worker-1   Ready   <none>   6d21h   v1.29.4+k3s1"
+}
+2026-05-07 11:20:53,026 p=17818 u=nhibuaa n=ansible INFO| TASK [[POST] K3s Worker setup complete] *************************************************************
+2026-05-07 11:20:53,026 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:53 +0700 (0:00:00.037)       0:01:05.806 ********** 
+2026-05-07 11:20:53,048 p=17818 u=nhibuaa n=ansible INFO| ok: [worker-1] => {
+    "msg": "K3s Worker node worker-1 joined cluster"
+}
+2026-05-07 11:20:53,051 p=17818 u=nhibuaa n=ansible INFO| PLAY [PLAY 4 - Install Kubernetes Tools & Monitoring on Master] *************************************
+2026-05-07 11:20:53,068 p=17818 u=nhibuaa n=ansible INFO| TASK [Gathering Facts] ******************************************************************************
+2026-05-07 11:20:53,068 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:53 +0700 (0:00:00.041)       0:01:05.847 ********** 
+2026-05-07 11:20:54,305 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:54,311 p=17818 u=nhibuaa n=ansible INFO| TASK [[PRE] Ensure python3-pip is installed] ********************************************************
+2026-05-07 11:20:54,311 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:54 +0700 (0:00:01.243)       0:01:07.091 ********** 
+2026-05-07 11:20:56,397 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:56,403 p=17818 u=nhibuaa n=ansible INFO| TASK [[PRE] Install Python libraries for K8s modules] ***********************************************
+2026-05-07 11:20:56,406 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:56 +0700 (0:00:02.095)       0:01:09.186 ********** 
+2026-05-07 11:20:58,237 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:58,248 p=17818 u=nhibuaa n=ansible INFO| TASK [monitoring : [MON] Add Prometheus Community Helm repo] ****************************************
+2026-05-07 11:20:58,248 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:58 +0700 (0:00:01.841)       0:01:11.027 ********** 
+2026-05-07 11:20:59,701 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:20:59,716 p=17818 u=nhibuaa n=ansible INFO| TASK [monitoring : [MON] Install Prometheus & Grafana via Helm] *************************************
+2026-05-07 11:20:59,716 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:20:59 +0700 (0:00:01.467)       0:01:12.495 ********** 
+2026-05-07 11:21:02,742 p=17818 u=nhibuaa n=ansible WARNING| [WARNING]: The default idempotency check can fail to report changes in certain cases. Install helm diff >= 3.4.1 for better results.
+
+2026-05-07 11:21:02,742 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:21:02,754 p=17818 u=nhibuaa n=ansible INFO| TASK [helm-tools : [HELM] Check if Helm is already installed] ***************************************
+2026-05-07 11:21:02,754 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:21:02 +0700 (0:00:03.038)       0:01:15.533 ********** 
+2026-05-07 11:21:03,502 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:21:03,508 p=17818 u=nhibuaa n=ansible INFO| TASK [helm-tools : [HELM] Check current Helm version] ***********************************************
+2026-05-07 11:21:03,509 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:21:03 +0700 (0:00:00.754)       0:01:16.288 ********** 
+2026-05-07 11:21:04,010 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:21:04,016 p=17818 u=nhibuaa n=ansible INFO| TASK [helm-tools : [HELM] Download Helm installer] **************************************************
+2026-05-07 11:21:04,016 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:21:04 +0700 (0:00:00.507)       0:01:16.796 ********** 
+2026-05-07 11:21:04,037 p=17818 u=nhibuaa n=ansible INFO| skipping: [master]
+2026-05-07 11:21:04,046 p=17818 u=nhibuaa n=ansible INFO| TASK [helm-tools : [HELM] Install Helm v3.14.4] *****************************************************
+2026-05-07 11:21:04,046 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:21:04 +0700 (0:00:00.029)       0:01:16.825 ********** 
+2026-05-07 11:21:04,065 p=17818 u=nhibuaa n=ansible INFO| skipping: [master]
+2026-05-07 11:21:04,071 p=17818 u=nhibuaa n=ansible INFO| TASK [helm-tools : [HELM] Verify Helm installation] *************************************************
+2026-05-07 11:21:04,071 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:21:04 +0700 (0:00:00.025)       0:01:16.851 ********** 
+2026-05-07 11:21:04,557 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:21:04,564 p=17818 u=nhibuaa n=ansible INFO| TASK [helm-tools : [HELM] Show installed Helm version] **********************************************
+2026-05-07 11:21:04,564 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:21:04 +0700 (0:00:00.492)       0:01:17.344 ********** 
+2026-05-07 11:21:04,587 p=17818 u=nhibuaa n=ansible INFO| ok: [master] => {
+    "msg": "Helm installed: v3.14.4+g81c902a"
+}
+2026-05-07 11:21:04,594 p=17818 u=nhibuaa n=ansible INFO| TASK [helm-tools : [HELM] Add Jetstack Helm repository (for cert-manager)] **************************
+2026-05-07 11:21:04,594 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:21:04 +0700 (0:00:00.029)       0:01:17.373 ********** 
+2026-05-07 11:21:05,370 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:21:05,375 p=17818 u=nhibuaa n=ansible INFO| TASK [helm-tools : [HELM] Add ingress-nginx Helm repository] ****************************************
+2026-05-07 11:21:05,376 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:21:05 +0700 (0:00:00.781)       0:01:18.155 ********** 
+2026-05-07 11:21:06,144 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:21:06,152 p=17818 u=nhibuaa n=ansible INFO| TASK [helm-tools : [HELM] Add Prometheus community Helm repository] *********************************
+2026-05-07 11:21:06,152 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:21:06 +0700 (0:00:00.776)       0:01:18.931 ********** 
+2026-05-07 11:21:06,930 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:21:06,937 p=17818 u=nhibuaa n=ansible INFO| TASK [helm-tools : [HELM] Update Helm repositories] *************************************************
+2026-05-07 11:21:06,937 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:21:06 +0700 (0:00:00.785)       0:01:19.717 ********** 
+2026-05-07 11:21:08,225 p=17818 u=nhibuaa n=ansible INFO| ok: [master]
+2026-05-07 11:21:08,232 p=17818 u=nhibuaa n=ansible INFO| TASK [helm-tools : [INGRESS] Create ingress-nginx namespace] ****************************************
+2026-05-07 11:21:08,232 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:21:08 +0700 (0:00:01.295)       0:01:21.012 ********** 
+2026-05-07 11:21:10,759 p=17818 u=nhibuaa n=ansible INFO| changed: [master]
+2026-05-07 11:21:10,765 p=17818 u=nhibuaa n=ansible INFO| TASK [helm-tools : [INGRESS] Install ingress-nginx via Helm] ****************************************
+2026-05-07 11:21:10,765 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:21:10 +0700 (0:00:02.532)       0:01:23.545 ********** 
+2026-05-07 11:21:12,874 p=17818 u=nhibuaa n=ansible INFO| changed: [master]
+2026-05-07 11:21:12,880 p=17818 u=nhibuaa n=ansible INFO| TASK [helm-tools : [INGRESS] Wait for ingress-nginx to be ready] ************************************
+2026-05-07 11:21:12,881 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:21:12 +0700 (0:00:02.115)       0:01:25.660 ********** 
+2026-05-07 11:23:13,568 p=17818 u=nhibuaa n=ansible ERROR| [ERROR]: Task failed: Module failed: non-zero return code
+Origin: /home/nhibuaa/devops-final-project/phase1-infrastructure/ansible/roles/helm-tools/tasks/main.yml:125:3
+
+123   tags: [helm, ingress]
+124
+125 - name: "[INGRESS] Wait for ingress-nginx to be ready"
+      ^ column 3
+
+
+2026-05-07 11:23:13,569 p=17818 u=nhibuaa n=ansible INFO| fatal: [master]: FAILED! => {"changed": false, "cmd": ["kubectl", "wait", "--namespace", "ingress-nginx", "--for=condition=ready", "pod", "--selector=app.kubernetes.io/component=controller", "--timeout=120s"], "delta": "0:02:00.129998", "end": "2026-05-07 11:23:13.321223", "msg": "non-zero return code", "rc": 1, "start": "2026-05-07 11:21:13.191225", "stderr": "timed out waiting for the condition on pods/ingress-nginx-controller-bhsvq\ntimed out waiting for the condition on pods/ingress-nginx-controller-s8cs7", "stderr_lines": ["timed out waiting for the condition on pods/ingress-nginx-controller-bhsvq", "timed out waiting for the condition on pods/ingress-nginx-controller-s8cs7"], "stdout": "", "stdout_lines": []}
+2026-05-07 11:23:13,571 p=17818 u=nhibuaa n=ansible INFO| PLAY RECAP ******************************************************************************************
+2026-05-07 11:23:13,572 p=17818 u=nhibuaa n=ansible INFO| master                     : ok=50   changed=6    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0   
+2026-05-07 11:23:13,572 p=17818 u=nhibuaa n=ansible INFO| worker-1                   : ok=25   changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-05-07 11:23:13,572 p=17818 u=nhibuaa n=ansible INFO| PLAYBOOK RECAP **************************************************************************************
+2026-05-07 11:23:13,572 p=17818 u=nhibuaa n=ansible INFO| Playbook run took 0 days, 0 hours, 3 minutes, 26 seconds
+
+2026-05-07 11:23:13,572 p=17818 u=nhibuaa n=ansible INFO| TASKS RECAP *****************************************************************************************
+2026-05-07 11:23:13,573 p=17818 u=nhibuaa n=ansible INFO| Thursday 07 May 2026  11:23:13 +0700 (0:02:00.691)       0:03:26.352 ********** 
+2026-05-07 11:23:13,573 p=17818 u=nhibuaa n=ansible INFO| =============================================================================== 
+2026-05-07 11:23:13,573 p=17818 u=nhibuaa n=ansible INFO| helm-tools : [INGRESS] Wait for ingress-nginx to be ready ---------------------------------- 120.69s
+2026-05-07 11:23:13,573 p=17818 u=nhibuaa n=ansible INFO| k3s-master : [K3S-MASTER] Wait for K3s API server to be ready ------------------------------- 10.61s
+2026-05-07 11:23:13,573 p=17818 u=nhibuaa n=ansible INFO| common : [COMMON] Configure UFW - allow specific external ports ------------------------------ 8.02s
+2026-05-07 11:23:13,573 p=17818 u=nhibuaa n=ansible INFO| common : [COMMON] Update apt cache ----------------------------------------------------------- 6.31s
+2026-05-07 11:23:13,573 p=17818 u=nhibuaa n=ansible INFO| k3s-worker : [K3S-WORKER] Install K3s agent and join cluster --------------------------------- 5.56s
+2026-05-07 11:23:13,573 p=17818 u=nhibuaa n=ansible INFO| Gathering Facts ------------------------------------------------------------------------------ 4.15s
+2026-05-07 11:23:13,573 p=17818 u=nhibuaa n=ansible INFO| monitoring : [MON] Install Prometheus & Grafana via Helm ------------------------------------- 3.04s
+2026-05-07 11:23:13,574 p=17818 u=nhibuaa n=ansible INFO| helm-tools : [INGRESS] Create ingress-nginx namespace ---------------------------------------- 2.53s
+2026-05-07 11:23:13,574 p=17818 u=nhibuaa n=ansible INFO| Gathering Facts ------------------------------------------------------------------------------ 2.26s
+2026-05-07 11:23:13,574 p=17818 u=nhibuaa n=ansible INFO| common : [COMMON] Enable UFW with default deny incoming -------------------------------------- 2.16s
+2026-05-07 11:23:13,574 p=17818 u=nhibuaa n=ansible INFO| helm-tools : [INGRESS] Install ingress-nginx via Helm ---------------------------------------- 2.12s
+2026-05-07 11:23:13,574 p=17818 u=nhibuaa n=ansible INFO| [PRE] Ensure python3-pip is installed -------------------------------------------------------- 2.09s
+2026-05-07 11:23:13,574 p=17818 u=nhibuaa n=ansible INFO| common : [COMMON] Set kernel parameters for Kubernetes networking ---------------------------- 1.85s
+2026-05-07 11:23:13,574 p=17818 u=nhibuaa n=ansible INFO| [PRE] Install Python libraries for K8s modules ----------------------------------------------- 1.84s
+2026-05-07 11:23:13,574 p=17818 u=nhibuaa n=ansible INFO| Gathering Facts ------------------------------------------------------------------------------ 1.63s
+2026-05-07 11:23:13,574 p=17818 u=nhibuaa n=ansible INFO| common : [COMMON] Set hostname correctly ----------------------------------------------------- 1.62s
+2026-05-07 11:23:13,574 p=17818 u=nhibuaa n=ansible INFO| monitoring : [MON] Add Prometheus Community Helm repo ---------------------------------------- 1.47s
+2026-05-07 11:23:13,574 p=17818 u=nhibuaa n=ansible INFO| k3s-worker : [K3S-WORKER] Ensure K3s agent service is started and enabled -------------------- 1.46s
+2026-05-07 11:23:13,575 p=17818 u=nhibuaa n=ansible INFO| helm-tools : [HELM] Update Helm repositories ------------------------------------------------- 1.30s
+2026-05-07 11:23:13,575 p=17818 u=nhibuaa n=ansible INFO| common : [COMMON] Install required system packages ------------------------------------------- 1.24s
