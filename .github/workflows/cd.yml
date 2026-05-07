@@ -160,6 +160,8 @@ jobs:
       - name: "Apply ConfigMaps and Secrets (staging)"
         run: |
           # Inject staging-specific secrets từ GitHub Secrets
+          kubectl delete secret backend-secret -n staging --ignore-not-found
+          
           kubectl create secret generic backend-secret \
             --namespace=staging \
             --from-literal=DB_USER="${{ secrets.STAGING_DB_USER }}" \
