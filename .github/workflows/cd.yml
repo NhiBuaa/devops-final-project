@@ -138,10 +138,10 @@ jobs:
       # ── Inject image tag vào K8s manifests ───────────────────────────────
       - name: "Update image tags in manifests"
         run: |
-          sed -i "s|thongchau/frontend:.*|${{ env.DOCKER_USERNAME }}/frontend:${{ env.IMAGE_TAG }}|g" \
+          sed -i "s|thongchau/final-devops-frontend:.*|${{ env.DOCKER_USERNAME }}/final-devops-frontend:${{ env.IMAGE_TAG }}|g" \
             phase2-k8s/frontend/deployment.yaml
 
-          sed -i "s|thongchau/backend:.*|${{ env.DOCKER_USERNAME }}/backend:${{ env.IMAGE_TAG }}|g" \
+          sed -i "s|thongchau/final-devops-backend:.*|${{ env.DOCKER_USERNAME }}/final-devops-backend:${{ env.IMAGE_TAG }}|g" \
             phase2-k8s/backend/deployment.yaml
 
           echo "Frontend image:"
@@ -333,9 +333,9 @@ jobs:
 
       - name: "Update image tags in manifests"
         run: |
-          sed -i "s|thongchau/frontend:.*|${{ env.DOCKER_USERNAME }}/frontend:${{ env.IMAGE_TAG }}|g" \
+          sed -i "s|thongchau/final-devops-frontend:.*|${{ env.DOCKER_USERNAME }}/final-devops-frontend:${{ env.IMAGE_TAG }}|g" \
             phase2-k8s/frontend/deployment.yaml
-          sed -i "s|thongchau/backend:.*|${{ env.DOCKER_USERNAME }}/backend:${{ env.IMAGE_TAG }}|g" \
+          sed -i "s|thongchau/final-devops-backend:.*|${{ env.DOCKER_USERNAME }}/final-devops-backend:${{ env.IMAGE_TAG }}|g" \
             phase2-k8s/backend/deployment.yaml
 
       - name: "Apply ConfigMaps and Secrets (production)"
