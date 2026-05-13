@@ -8,19 +8,25 @@ function App() {
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [error, setError] = useState('');
 
   const fetchMembers = async () => {
-    const res = await api.getMembers();
-    setMembers(res.data);
+    try {
+      setError('');
+      const res = await api.getMembers();
+      setMembers(Array.isArray(res.data) ? res.data : []);
+
+      if (!Array.isArray(res.data)) {
+        setError('API tra ve du lieu khong dung dinh dang danh sach thanh vien.');
+      }
+    } catch (err) {
+      console.error('Failed to fetch members:', err);
+      setMembers([]);
+      setError('Khong the tai du lieu tu staging. Vui long kiem tra backend va database.');
+    }
   };
 
   useEffect(() => {
-
-    const fetchMembers = async () => {
-      const res = await api.getMembers();
-      setMembers(res.data);
-    };
-
     fetchMembers();
   }, []);
 
@@ -63,6 +69,12 @@ function App() {
           </div>
         </header>
 
+        {error && (
+          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
+            {error}
+          </div>
+        )}
+
         {/* Form */}
         <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md mb-8 flex gap-4">
           <input value={name} onChange={e => setName(e.target.value)} placeholder="Tên" className="flex-1 border p-2 rounded" required />
@@ -94,6 +106,13 @@ function App() {
                   </td>
                 </tr>
               ))}
+              {!members.length && (
+                <tr className="border-t">
+                  <td className="p-4 text-gray-500" colSpan={3}>
+                    Chua co du lieu thanh vien de hien thi.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

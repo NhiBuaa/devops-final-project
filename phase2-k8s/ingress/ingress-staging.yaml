@@ -20,6 +20,13 @@ spec:
     - host: staging.nhibuaa.space
       http:
         paths:
+          - path: /healthz
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-service
+                port:
+                  number: 8080
           - path: /api
             pathType: Prefix
             backend:

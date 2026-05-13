@@ -27,6 +27,14 @@ app.get('/health', (req, res) => {
     res.status(200).json({ status: 'UP', timestamp: new Date() });
 });
 
+app.get('/healthz', (req, res) => {
+    res.status(200).json({ status: 'UP', timestamp: new Date() });
+});
+
+app.get('/api/healthz', (req, res) => {
+    res.status(200).json({ status: 'UP', timestamp: new Date() });
+});
+
 // 2. CRUD: Get all members
 app.get('/api/members', async (req, res) => {
     try {
