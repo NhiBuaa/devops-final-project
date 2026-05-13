@@ -58,7 +58,7 @@ k apply -f frontend/deployment.yaml -n $NS
 k apply -f frontend/hpa.yaml -n $NS
 
 echo "Waiting for Frontend deployment to be available..."
-k rollout status deployment/frontend-deployment -n $NS --timeout=120s
+k rollout status deployment/frontend -n $NS --timeout=120s
 
 # STEP 6: Ingress
 echo -e "${GREEN}[6/7] Applying Ingress (TLS)...${NC}"

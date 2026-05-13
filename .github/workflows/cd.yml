@@ -148,18 +148,32 @@ jobs:
         run: |
           kubectl apply -f phase2-k8s/backend/deployment.yaml -n staging
 
-          kubectl rollout status deployment/backend \
-            --namespace=staging \
-            --timeout=180s
+          if ! kubectl rollout status deployment/backend \
+              --namespace=staging \
+              --timeout=180s; then
+            echo "Backend rollout failed. Collecting diagnostics..."
+            kubectl get pods -n staging -l app=backend -o wide || true
+            kubectl describe deployment/backend -n staging || true
+            kubectl describe pods -n staging -l app=backend || true
+            kubectl logs -n staging -l app=backend --tail=100 || true
+            exit 1
+          fi
 
       - name: "Rolling update - Frontend (staging)"
         run: |
           kubectl apply -f phase2-k8s/frontend/deployment.yaml -n staging
           kubectl apply -f phase2-k8s/frontend/hpa.yaml -n staging
 
-          kubectl rollout status deployment/frontend \
-            --namespace=staging \
-            --timeout=180s
+          if ! kubectl rollout status deployment/frontend \
+              --namespace=staging \
+              --timeout=180s; then
+            echo "Frontend rollout failed. Collecting diagnostics..."
+            kubectl get pods -n staging -l app=frontend -o wide || true
+            kubectl describe deployment/frontend -n staging || true
+            kubectl describe pods -n staging -l app=frontend || true
+            kubectl logs -n staging -l app=frontend --tail=100 || true
+            exit 1
+          fi
 
       - name: "Apply Ingress (staging)"
         run: |
@@ -190,9 +204,9 @@ jobs:
           echo "Staging health check passed (HTTP $HTTP_STATUS)"
 
       - name: "Auto rollback - Staging (on failure)"
-        if: failure() && steps.staging-health.outcome == 'failure'
+        if: failure()
         run: |
-          echo "Health check failed. Starting automatic rollback..."
+          echo "Staging deployment failed. Starting automatic rollback..."
 
           kubectl rollout undo deployment/frontend --namespace=staging || echo "No previous frontend revision to roll back to"
           kubectl rollout undo deployment/backend --namespace=staging || echo "No previous backend revision to roll back to"

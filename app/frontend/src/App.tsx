@@ -8,20 +8,41 @@ function App() {
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [error, setError] = useState('');
 
   const fetchMembers = async () => {
-    const res = await api.getMembers();
-    setMembers(res.data);
+    try {
+      const res = await api.getMembers();
+      return {
+        members: Array.isArray(res.data) ? res.data : [],
+        error: Array.isArray(res.data)
+          ? ''
+          : 'API tra ve du lieu khong dung dinh dang danh sach thanh vien.',
+      };
+    } catch (err) {
+      console.error('Failed to fetch members:', err);
+      return {
+        members: [],
+        error: 'Khong the tai du lieu tu staging. Vui long kiem tra backend va database.',
+      };
+    }
   };
 
   useEffect(() => {
+    let cancelled = false;
 
-    const fetchMembers = async () => {
-      const res = await api.getMembers();
-      setMembers(res.data);
+    void fetchMembers().then(({ members, error }) => {
+      if (cancelled) {
+        return;
+      }
+
+      setMembers(members);
+      setError(error);
+    });
+
+    return () => {
+      cancelled = true;
     };
-
-    fetchMembers();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,7 +53,9 @@ function App() {
       await api.createMember({ name, role });
     }
     setName(''); setRole(''); setEditingId(null);
-    fetchMembers();
+    const { members, error } = await fetchMembers();
+    setMembers(members);
+    setError(error);
   };
 
   const handleEdit = (m: Member) => {
@@ -42,7 +65,9 @@ function App() {
   const handleDelete = async (id: number) => {
     if (confirm('Xóa thành viên này?')) {
       await api.deleteMember(id);
-      fetchMembers();
+      const { members, error } = await fetchMembers();
+      setMembers(members);
+      setError(error);
     }
   };
 
@@ -62,6 +87,12 @@ function App() {
             </p>
           </div>
         </header>
+
+        {error && (
+          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
+            {error}
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md mb-8 flex gap-4">
@@ -94,6 +125,13 @@ function App() {
                   </td>
                 </tr>
               ))}
+              {!members.length && (
+                <tr className="border-t">
+                  <td className="p-4 text-gray-500" colSpan={3}>
+                    Chua co du lieu thanh vien de hien thi.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
