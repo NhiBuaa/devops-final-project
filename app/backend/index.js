@@ -82,9 +82,35 @@ const server = app.listen(PORT, () => {
 });
 
 // Graceful Shutdown cho Kubernetes
-process.on('SIGTERM', () => {
-    console.log('SIGTERM signal received: closing HTTP server');
-    server.close(() => {
-        pool.end(() => console.log('Database pool closed'));
+const shutdown = (signal) => {
+    console.log(`${signal} signal received: starting graceful shutdown`);
+
+    // Drop idle keep-alive sockets first so rollouts don't hang on old replicas.
+    if (typeof server.closeIdleConnections === 'function') {
+        server.closeIdleConnections();
+    }
+    if (typeof server.closeAllConnections === 'function') {
+        server.closeAllConnections();
+    }
+
+    const forceExitTimer = setTimeout(() => {
+        console.error('Graceful shutdown timed out, forcing process exit');
+        process.exit(1);
+    }, 10000);
+    forceExitTimer.unref();
+
+    server.close((err) => {
+        if (err) {
+            console.error('HTTP server close error:', err);
+        }
+
+        pool.end(() => {
+            clearTimeout(forceExitTimer);
+            console.log('HTTP server and database pool closed');
+            process.exit(0);
+        });
     });
-});
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
