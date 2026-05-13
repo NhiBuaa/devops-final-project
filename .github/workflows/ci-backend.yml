@@ -18,16 +18,14 @@ name: "CI — Backend and Security"
 on:
   push:
     branches:
-      - "**"                    # Lắng nghe TẤT CẢ branches (Tier 1 chạy ở đây)
+      - "**" 
+    paths:
+      - "app/backend/**"                 # Lắng nghe TẤT CẢ branches (Tier 1 chạy ở đây)
   pull_request:
     branches:
-      - main                    # Kiểm tra nghiêm ngặt khi PR vào main
-      - develop
+      - main
     paths:
       - "app/backend/**"
-    paths-ignore:
-      - ".github/workflows/cd.yml"
-      - "phase2-k8s/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
