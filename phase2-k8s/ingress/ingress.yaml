@@ -2,26 +2,38 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: main-ingress
+  namespace: production
   labels:
     app: ingress
     project: devops-final
   annotations:
-    # Báo cho cert-manager tự động cấp SSL
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    traefik.ingress.kubernetes.io/router.tls: "true"
-
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
-  # Khai báo rõ ràng sử dụng Traefik
-  ingressClassName: traefik
+  ingressClassName: nginx
   tls:
     - hosts:
         - app.nhibuaa.space
+        - nhibuaa.space
       secretName: tls-production-cert
   rules:
     - host: app.nhibuaa.space
       http:
         paths:
-          # Ưu tiên /api để định tuyến luồng dữ liệu về Backend
+          - path: /healthz
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-service
+                port:
+                  number: 8080
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-service
+                port:
+                  number: 8080
           - path: /api
             pathType: Prefix
             backend:
@@ -29,7 +41,37 @@ spec:
                 name: backend-service
                 port:
                   number: 8080
-          # Các luồng truy cập web bình thường sẽ về Frontend
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-service
+                port:
+                  number: 80
+    - host: nhibuaa.space
+      http:
+        paths:
+          - path: /healthz
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-service
+                port:
+                  number: 8080
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-service
+                port:
+                  number: 8080
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-service
+                port:
+                  number: 8080
           - path: /
             pathType: Prefix
             backend:
@@ -39,18 +81,18 @@ spec:
                   number: 80
 
 ---
-# Ingress riêng cho Grafana monitoring dashboard
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: monitoring-ingress
+  namespace: monitoring
   labels:
     project: devops-final
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    traefik.ingress.kubernetes.io/router.tls: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
-  ingressClassName: traefik
+  ingressClassName: nginx
   tls:
     - hosts:
         - grafana.nhibuaa.space
