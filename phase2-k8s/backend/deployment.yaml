@@ -16,7 +16,7 @@ spec:
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 1
+      maxUnavailable: 2
       maxSurge: 1
   template:
     metadata:
@@ -117,9 +117,9 @@ spec:
           lifecycle:
             preStop:
               exec:
-                command: ["/bin/sh", "-c", "sleep 5"]
+                command: ["/bin/sh", "-c", "sleep 2"]
 
-      terminationGracePeriodSeconds: 35
+      terminationGracePeriodSeconds: 20
 
 ---
 apiVersion: v1
