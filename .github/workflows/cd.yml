@@ -116,9 +116,20 @@ jobs:
         run: |
           for image in final-devops-frontend final-devops-backend; do
             REPO="${{ env.DOCKER_USERNAME }}/$image"
-            echo "Checking Docker Hub tag: $REPO:${{ env.IMAGE_TAG }}"
-            if ! docker manifest inspect "$REPO:${{ env.IMAGE_TAG }}" > /dev/null 2>&1; then
-              echo "Missing image tag: $REPO:${{ env.IMAGE_TAG }}"
+            FOUND=false
+            for attempt in $(seq 1 20); do
+              echo "Checking Docker Hub tag: $REPO:${{ env.IMAGE_TAG }} (attempt $attempt/20)"
+              if docker manifest inspect "$REPO:${{ env.IMAGE_TAG }}" > /dev/null 2>&1; then
+                FOUND=true
+                break
+              fi
+
+              echo "Image not available yet, waiting 30s for CI push to complete..."
+              sleep 30
+            done
+
+            if [ "$FOUND" != "true" ]; then
+              echo "Missing image tag after waiting: $REPO:${{ env.IMAGE_TAG }}"
               exit 1
             fi
           done
@@ -314,9 +325,20 @@ jobs:
         run: |
           for image in final-devops-frontend final-devops-backend; do
             REPO="${{ env.DOCKER_USERNAME }}/$image"
-            echo "Checking Docker Hub tag: $REPO:${{ env.IMAGE_TAG }}"
-            if ! docker manifest inspect "$REPO:${{ env.IMAGE_TAG }}" > /dev/null 2>&1; then
-              echo "Missing image tag: $REPO:${{ env.IMAGE_TAG }}"
+            FOUND=false
+            for attempt in $(seq 1 20); do
+              echo "Checking Docker Hub tag: $REPO:${{ env.IMAGE_TAG }} (attempt $attempt/20)"
+              if docker manifest inspect "$REPO:${{ env.IMAGE_TAG }}" > /dev/null 2>&1; then
+                FOUND=true
+                break
+              fi
+
+              echo "Image not available yet, waiting 30s for CI push to complete..."
+              sleep 30
+            done
+
+            if [ "$FOUND" != "true" ]; then
+              echo "Missing image tag after waiting: $REPO:${{ env.IMAGE_TAG }}"
               exit 1
             fi
           done
