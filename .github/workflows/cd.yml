@@ -106,6 +106,24 @@ jobs:
           kubectl create namespace staging --dry-run=client -o yaml | kubectl apply -f -
           kubectl label namespace staging environment=staging --overwrite
 
+      - name: "Verify Docker images exist for staging"
+        env:
+          DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
+        run: |
+          for image in final-devops-frontend final-devops-backend; do
+            REPO="${{ env.DOCKER_USERNAME }}/$image"
+            echo "Checking Docker Hub tag: $REPO:${{ env.IMAGE_TAG }}"
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+              -u "${{ env.DOCKER_USERNAME }}:${DOCKER_TOKEN}" \
+              "https://index.docker.io/v2/$REPO/manifests/${{ env.IMAGE_TAG }}")
+
+            if [ "$HTTP_STATUS" != "200" ]; then
+              echo "Missing image tag: $REPO:${{ env.IMAGE_TAG }} (HTTP $HTTP_STATUS)"
+              exit 1
+            fi
+          done
+
       - name: "Update image tags in manifests"
         run: |
           sed -i "s|thongchau/final-devops-frontend:.*|${{ env.DOCKER_USERNAME }}/final-devops-frontend:${{ env.IMAGE_TAG }}|g" \
@@ -286,6 +304,24 @@ jobs:
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
           kubectl cluster-info
+
+      - name: "Verify Docker images exist for production"
+        env:
+          DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
+        run: |
+          for image in final-devops-frontend final-devops-backend; do
+            REPO="${{ env.DOCKER_USERNAME }}/$image"
+            echo "Checking Docker Hub tag: $REPO:${{ env.IMAGE_TAG }}"
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+              -u "${{ env.DOCKER_USERNAME }}:${DOCKER_TOKEN}" \
+              "https://index.docker.io/v2/$REPO/manifests/${{ env.IMAGE_TAG }}")
+
+            if [ "$HTTP_STATUS" != "200" ]; then
+              echo "Missing image tag: $REPO:${{ env.IMAGE_TAG }} (HTTP $HTTP_STATUS)"
+              exit 1
+            fi
+          done
 
       - name: "Snapshot current state (for rollback reference)"
         id: snapshot
