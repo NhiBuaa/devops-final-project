@@ -72,6 +72,8 @@ jobs:
           context: ./app/frontend
           file: ./app/frontend/Dockerfile
           push: true
+          build-args: |
+            VITE_API_URL=/api
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/final-devops-frontend:${{ github.sha }}
             ${{ secrets.DOCKER_USERNAME }}/final-devops-frontend:latest
