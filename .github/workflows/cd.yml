@@ -221,7 +221,7 @@ jobs:
             exit 1
           fi
 
-          HTTP_STATUS=$(curl -sk -o /dev/null -w "%{http_code}" \
+          HTTP_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" \
             https://staging.nhibuaa.space/healthz || echo "000")
 
           if [ "$HTTP_STATUS" != "200" ]; then
@@ -321,6 +321,10 @@ jobs:
           chmod 600 ~/.kube/config
           kubectl cluster-info
 
+      - name: "Ensure production namespace exists"
+        run: |
+          kubectl apply -f phase2-k8s/namespace.yaml
+
       - name: "Verify Docker images exist for production"
         run: |
           for image in final-devops-frontend final-devops-backend; do
@@ -412,6 +416,8 @@ jobs:
 
       - name: "Apply Ingress (production)"
         run: |
+          kubectl delete ingress main-ingress -n default --ignore-not-found
+          kubectl delete ingress monitoring-ingress -n default --ignore-not-found
           kubectl apply -f phase2-k8s/ingress/ingress.yaml -n production
 
       - name: "Post-deploy health check (production)"
@@ -430,21 +436,24 @@ jobs:
 
           echo "Pod status check passed"
 
-          for i in 1 2 3; do
-            HTTP_STATUS=$(curl -sk -o /dev/null -w "%{http_code}" \
-              https://app.nhibuaa.space/healthz || echo "000")
-            if [ "$HTTP_STATUS" == "200" ]; then
-              echo "Health check $i/3 passed (HTTP $HTTP_STATUS)"
-              break
-            fi
-            echo "Health check $i/3 returned HTTP $HTTP_STATUS, retrying in 15s..."
-            sleep 15
-          done
+          for DOMAIN in app.nhibuaa.space nhibuaa.space; do
+            HTTP_STATUS="000"
+            for i in 1 2 3; do
+              HTTP_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" \
+                "https://${DOMAIN}/healthz" || echo "000")
+              if [ "$HTTP_STATUS" == "200" ]; then
+                echo "Health check ${DOMAIN} $i/3 passed (HTTP $HTTP_STATUS)"
+                break
+              fi
+              echo "Health check ${DOMAIN} $i/3 returned HTTP $HTTP_STATUS, retrying in 15s..."
+              sleep 15
+            done
 
-          if [ "$HTTP_STATUS" != "200" ]; then
-            echo "Production health check failed after 3 attempts"
-            exit 1
-          fi
+            if [ "$HTTP_STATUS" != "200" ]; then
+              echo "Production health check failed for ${DOMAIN} after 3 attempts"
+              exit 1
+            fi
+          done
 
       - name: "Auto rollback - Production (on failure)"
         if: failure()
