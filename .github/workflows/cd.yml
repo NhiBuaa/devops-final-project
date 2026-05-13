@@ -107,6 +107,24 @@ jobs:
           kubectl cluster-info
           kubectl get nodes
 
+      - name: "Resolve ingress class (staging)"
+        run: |
+          if kubectl get ingressclass traefik >/dev/null 2>&1; then
+            INGRESS_CLASS="traefik"
+          elif kubectl get ingressclass nginx >/dev/null 2>&1; then
+            INGRESS_CLASS="nginx"
+          else
+            echo "No supported IngressClass found. Available classes:"
+            kubectl get ingressclass -o wide || true
+            exit 1
+          fi
+
+          echo "Using IngressClass: ${INGRESS_CLASS}"
+          sed -i "s/ingressClassName: .*/ingressClassName: ${INGRESS_CLASS}/g" \
+            phase2-k8s/ingress/ingress-staging.yaml
+          sed -i "s|acme.cert-manager.io/http01-ingress-class: .*|acme.cert-manager.io/http01-ingress-class: \"${INGRESS_CLASS}\"|g" \
+            phase2-k8s/ingress/ingress-staging.yaml
+
       - name: "Ensure staging namespace exists"
         run: |
           kubectl create namespace staging --dry-run=client -o yaml | kubectl apply -f -
@@ -229,6 +247,21 @@ jobs:
             exit 1
           fi
 
+      - name: "Inspect ingress routing (staging)"
+        run: |
+          echo "Ingress classes:"
+          kubectl get ingressclass -o wide || true
+
+          echo "Ingress controllers:"
+          kubectl get pods -A -o wide | grep -E "ingress|traefik|cert-manager" || true
+          kubectl get svc -A -o wide | grep -E "ingress|traefik" || true
+
+          echo "Staging ingress and certificate:"
+          kubectl get ingress staging-ingress -n staging -o wide || true
+          kubectl describe ingress staging-ingress -n staging || true
+          kubectl get certificate tls-staging-cert -n staging -o wide || true
+          kubectl get secret tls-staging-cert -n staging || true
+
       - name: "Post-deploy health check (staging)"
         id: staging-health
         run: |
@@ -248,6 +281,8 @@ jobs:
 
           if [ "$HTTP_STATUS" != "200" ]; then
             echo "Health check failed. HTTP status: $HTTP_STATUS"
+            echo "Curl diagnostics:"
+            curl -Iv https://staging.nhibuaa.space/healthz || true
             exit 1
           fi
 
@@ -342,6 +377,24 @@ jobs:
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
           kubectl cluster-info
+
+      - name: "Resolve ingress class (production)"
+        run: |
+          if kubectl get ingressclass traefik >/dev/null 2>&1; then
+            INGRESS_CLASS="traefik"
+          elif kubectl get ingressclass nginx >/dev/null 2>&1; then
+            INGRESS_CLASS="nginx"
+          else
+            echo "No supported IngressClass found. Available classes:"
+            kubectl get ingressclass -o wide || true
+            exit 1
+          fi
+
+          echo "Using IngressClass: ${INGRESS_CLASS}"
+          sed -i "s/ingressClassName: .*/ingressClassName: ${INGRESS_CLASS}/g" \
+            phase2-k8s/ingress/ingress.yaml
+          sed -i "s|acme.cert-manager.io/http01-ingress-class: .*|acme.cert-manager.io/http01-ingress-class: \"${INGRESS_CLASS}\"|g" \
+            phase2-k8s/ingress/ingress.yaml
 
       - name: "Ensure production namespace exists"
         run: |
@@ -464,6 +517,21 @@ jobs:
             exit 1
           fi
 
+      - name: "Inspect ingress routing (production)"
+        run: |
+          echo "Ingress classes:"
+          kubectl get ingressclass -o wide || true
+
+          echo "Ingress controllers:"
+          kubectl get pods -A -o wide | grep -E "ingress|traefik|cert-manager" || true
+          kubectl get svc -A -o wide | grep -E "ingress|traefik" || true
+
+          echo "Production ingress and certificate:"
+          kubectl get ingress main-ingress -n production -o wide || true
+          kubectl describe ingress main-ingress -n production || true
+          kubectl get certificate tls-production-cert -n production -o wide || true
+          kubectl get secret tls-production-cert -n production || true
+
       - name: "Post-deploy health check (production)"
         id: prod-health
         run: |
@@ -495,6 +563,8 @@ jobs:
 
             if [ "$HTTP_STATUS" != "200" ]; then
               echo "Production health check failed for ${DOMAIN} after 3 attempts"
+              echo "Curl diagnostics for ${DOMAIN}:"
+              curl -Iv "https://${DOMAIN}/healthz" || true
               exit 1
             fi
           done

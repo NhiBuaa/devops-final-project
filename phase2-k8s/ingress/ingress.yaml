@@ -7,8 +7,10 @@ metadata:
     app: ingress
     project: devops-final
   annotations:
+    acme.cert-manager.io/http01-ingress-class: "nginx"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    traefik.ingress.kubernetes.io/router.tls: "true"
 spec:
   ingressClassName: nginx
   tls:
@@ -89,8 +91,10 @@ metadata:
   labels:
     project: devops-final
   annotations:
+    acme.cert-manager.io/http01-ingress-class: "nginx"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    traefik.ingress.kubernetes.io/router.tls: "true"
 spec:
   ingressClassName: nginx
   tls:
