@@ -25,6 +25,9 @@ on:
       - develop
     paths:
       - "app/backend/**"
+    paths-ignore:
+      - ".github/workflows/cd.yml"
+      - "phase2-k8s/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
