@@ -207,11 +207,33 @@ jobs:
         run: |
           kubectl apply -f phase2-k8s/ingress/ingress-staging.yaml -n staging
 
+      - name: "Wait for TLS certificate (staging)"
+        run: |
+          echo "Waiting for cert-manager to create tls-staging-cert..."
+          for i in $(seq 1 30); do
+            if kubectl get certificate tls-staging-cert -n staging >/dev/null 2>&1; then
+              break
+            fi
+            echo "Certificate not created yet, waiting 10s... ($i/30)"
+            sleep 10
+          done
+
+          if ! kubectl wait certificate/tls-staging-cert \
+              --namespace=staging \
+              --for=condition=Ready \
+              --timeout=300s; then
+            echo "TLS certificate was not ready. Collecting cert-manager diagnostics..."
+            kubectl describe certificate tls-staging-cert -n staging || true
+            kubectl get certificaterequests,orders,challenges -n staging -o wide || true
+            kubectl describe ingress staging-ingress -n staging || true
+            exit 1
+          fi
+
       - name: "Post-deploy health check (staging)"
         id: staging-health
         run: |
-          echo "Waiting 30s for ingress and cert-manager..."
-          sleep 30
+          echo "Waiting 15s for ingress routing to settle..."
+          sleep 15
 
           NOT_READY=$(kubectl get pods -n staging --no-headers | grep -v "Running" | grep -v "Completed" | wc -l)
 
@@ -420,11 +442,33 @@ jobs:
           kubectl delete ingress monitoring-ingress -n default --ignore-not-found
           kubectl apply -f phase2-k8s/ingress/ingress.yaml -n production
 
+      - name: "Wait for TLS certificate (production)"
+        run: |
+          echo "Waiting for cert-manager to create tls-production-cert..."
+          for i in $(seq 1 30); do
+            if kubectl get certificate tls-production-cert -n production >/dev/null 2>&1; then
+              break
+            fi
+            echo "Certificate not created yet, waiting 10s... ($i/30)"
+            sleep 10
+          done
+
+          if ! kubectl wait certificate/tls-production-cert \
+              --namespace=production \
+              --for=condition=Ready \
+              --timeout=300s; then
+            echo "TLS certificate was not ready. Collecting cert-manager diagnostics..."
+            kubectl describe certificate tls-production-cert -n production || true
+            kubectl get certificaterequests,orders,challenges -n production -o wide || true
+            kubectl describe ingress main-ingress -n production || true
+            exit 1
+          fi
+
       - name: "Post-deploy health check (production)"
         id: prod-health
         run: |
-          echo "Waiting 45s for production to stabilize..."
-          sleep 45
+          echo "Waiting 15s for production routing to settle..."
+          sleep 15
 
           NOT_READY=$(kubectl get pods -n production --no-headers | grep -v "Running" | grep -v "Completed" | wc -l)
 
