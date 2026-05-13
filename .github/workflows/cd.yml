@@ -200,7 +200,7 @@ jobs:
           kubectl rollout status deployment/frontend --namespace=staging --timeout=120s || true
           kubectl rollout status deployment/backend --namespace=staging --timeout=120s || true
 
-          echo "Rollback sequence completed"
+          echo "Rollback sequence completed!"
           echo "Staging deployment failed and was rolled back" >> $GITHUB_STEP_SUMMARY
           exit 1
 
