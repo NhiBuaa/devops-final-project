@@ -12,22 +12,37 @@ function App() {
 
   const fetchMembers = async () => {
     try {
-      setError('');
       const res = await api.getMembers();
-      setMembers(Array.isArray(res.data) ? res.data : []);
-
-      if (!Array.isArray(res.data)) {
-        setError('API tra ve du lieu khong dung dinh dang danh sach thanh vien.');
-      }
+      return {
+        members: Array.isArray(res.data) ? res.data : [],
+        error: Array.isArray(res.data)
+          ? ''
+          : 'API tra ve du lieu khong dung dinh dang danh sach thanh vien.',
+      };
     } catch (err) {
       console.error('Failed to fetch members:', err);
-      setMembers([]);
-      setError('Khong the tai du lieu tu staging. Vui long kiem tra backend va database.');
+      return {
+        members: [],
+        error: 'Khong the tai du lieu tu staging. Vui long kiem tra backend va database.',
+      };
     }
   };
 
   useEffect(() => {
-    fetchMembers();
+    let cancelled = false;
+
+    void fetchMembers().then(({ members, error }) => {
+      if (cancelled) {
+        return;
+      }
+
+      setMembers(members);
+      setError(error);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,7 +53,9 @@ function App() {
       await api.createMember({ name, role });
     }
     setName(''); setRole(''); setEditingId(null);
-    fetchMembers();
+    const { members, error } = await fetchMembers();
+    setMembers(members);
+    setError(error);
   };
 
   const handleEdit = (m: Member) => {
@@ -48,7 +65,9 @@ function App() {
   const handleDelete = async (id: number) => {
     if (confirm('Xóa thành viên này?')) {
       await api.deleteMember(id);
-      fetchMembers();
+      const { members, error } = await fetchMembers();
+      setMembers(members);
+      setError(error);
     }
   };
 
