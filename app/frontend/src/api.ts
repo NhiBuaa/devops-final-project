@@ -1,7 +1,17 @@
 import axios from 'axios';
 import type { Member } from './types';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+const rawApiUrl = import.meta.env.VITE_API_URL?.trim();
+
+// Use same-origin API by default so each environment talks to its own ingress.
+// If a mismatched absolute URL is injected at build time, fall back to /api.
+const API_URL =
+    rawApiUrl &&
+    typeof window !== 'undefined' &&
+    /^https?:\/\//.test(rawApiUrl) &&
+    new URL(rawApiUrl).hostname !== window.location.hostname
+        ? '/api'
+        : rawApiUrl || '/api';
 
 export const api = axios.create({
     baseURL: API_URL,
