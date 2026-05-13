@@ -396,7 +396,7 @@ jobs:
           kubectl rollout status deployment/frontend --namespace=production --timeout=180s || true
           kubectl rollout status deployment/backend --namespace=production --timeout=180s || true
 
-          echo "Production rolled back successfully"
+          echo "Production rolled back successfully!"
           exit 1
 
       - name: "Production deployment summary"
