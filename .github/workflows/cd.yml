@@ -493,7 +493,7 @@ jobs:
         run: |
           kubectl delete ingress main-ingress -n default --ignore-not-found
           kubectl delete ingress monitoring-ingress -n default --ignore-not-found
-          kubectl apply -f phase2-k8s/ingress/ingress.yaml -n production
+          kubectl apply -f phase2-k8s/ingress/ingress.yaml
 
       - name: "Wait for TLS certificate (production)"
         run: |
