@@ -22,10 +22,6 @@ on:
           - staging
           - production
         default: staging
-      production_confirm:
-        description: "Type DEPLOY_PRODUCTION to allow production deployment."
-        required: false
-        default: "no"
 
 concurrency:
   group: cd-${{ github.ref }}
@@ -55,7 +51,7 @@ jobs:
             TARGET_ENVIRONMENT="${{ inputs.environment }}"
           else
             TAG="${{ github.sha }}"
-            TARGET_ENVIRONMENT="staging"
+            TARGET_ENVIRONMENT="production"
           fi
 
           if [ -z "$TAG" ]; then
@@ -367,7 +363,7 @@ jobs:
     needs:
       - check-ci-status
       - deploy-staging
-    if: needs.check-ci-status.outputs.target_environment == 'production' && inputs.production_confirm == 'DEPLOY_PRODUCTION'
+    if: needs.check-ci-status.outputs.target_environment == 'production'
     environment:
       name: production-approval
 
@@ -396,7 +392,7 @@ jobs:
     needs:
       - check-ci-status
       - await-approval
-    if: needs.check-ci-status.outputs.target_environment == 'production' && inputs.production_confirm == 'DEPLOY_PRODUCTION'
+    if: needs.check-ci-status.outputs.target_environment == 'production'
     environment:
       name: production
       url: https://app.nhibuaa.space
