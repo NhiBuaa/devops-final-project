@@ -120,15 +120,20 @@ jobs:
 
       - name: "Snapshot production state before staging deploy"
         id: production-before-staging
-        if: needs.check-ci-status.outputs.target_environment == 'staging'
         run: |
           FRONTEND_IMAGE=$(kubectl get deployment frontend -n production -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
           BACKEND_IMAGE=$(kubectl get deployment backend -n production -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
+          APP_HTML_HASH=$(curl -fsSL https://app.nhibuaa.space 2>/dev/null | sha256sum | awk '{print $1}' || true)
+          APP_ASSET=$(curl -fsSL https://app.nhibuaa.space 2>/dev/null | grep -oE '/assets/index-[^"]+\.js' | head -1 || true)
 
           echo "frontend_image=$FRONTEND_IMAGE" >> $GITHUB_OUTPUT
           echo "backend_image=$BACKEND_IMAGE" >> $GITHUB_OUTPUT
+          echo "app_html_hash=$APP_HTML_HASH" >> $GITHUB_OUTPUT
+          echo "app_asset=$APP_ASSET" >> $GITHUB_OUTPUT
           echo "Production frontend before staging: ${FRONTEND_IMAGE:-<missing>}"
           echo "Production backend before staging: ${BACKEND_IMAGE:-<missing>}"
+          echo "Production app HTML hash before staging: ${APP_HTML_HASH:-<missing>}"
+          echo "Production app asset before staging: ${APP_ASSET:-<missing>}"
 
       - name: "Resolve ingress class (staging)"
         run: |
@@ -312,20 +317,33 @@ jobs:
           echo "Staging health check passed (HTTP $HTTP_STATUS)"
 
       - name: "Verify production was not changed by staging deploy"
-        if: needs.check-ci-status.outputs.target_environment == 'staging'
         run: |
           BEFORE_FRONTEND="${{ steps.production-before-staging.outputs.frontend_image }}"
           BEFORE_BACKEND="${{ steps.production-before-staging.outputs.backend_image }}"
+          BEFORE_APP_HASH="${{ steps.production-before-staging.outputs.app_html_hash }}"
+          BEFORE_APP_ASSET="${{ steps.production-before-staging.outputs.app_asset }}"
           AFTER_FRONTEND=$(kubectl get deployment frontend -n production -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
           AFTER_BACKEND=$(kubectl get deployment backend -n production -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
+          AFTER_APP_HASH=$(curl -fsSL https://app.nhibuaa.space 2>/dev/null | sha256sum | awk '{print $1}' || true)
+          AFTER_APP_ASSET=$(curl -fsSL https://app.nhibuaa.space 2>/dev/null | grep -oE '/assets/index-[^"]+\.js' | head -1 || true)
 
           echo "Production frontend before: ${BEFORE_FRONTEND:-<missing>}"
           echo "Production frontend after:  ${AFTER_FRONTEND:-<missing>}"
           echo "Production backend before:  ${BEFORE_BACKEND:-<missing>}"
           echo "Production backend after:   ${AFTER_BACKEND:-<missing>}"
+          echo "Production app HTML hash before: ${BEFORE_APP_HASH:-<missing>}"
+          echo "Production app HTML hash after:  ${AFTER_APP_HASH:-<missing>}"
+          echo "Production app asset before:     ${BEFORE_APP_ASSET:-<missing>}"
+          echo "Production app asset after:      ${AFTER_APP_ASSET:-<missing>}"
 
           if [ "$BEFORE_FRONTEND" != "$AFTER_FRONTEND" ] || [ "$BEFORE_BACKEND" != "$AFTER_BACKEND" ]; then
-            echo "Production changed during a staging-only deployment. Blocking the pipeline."
+            echo "Production deployment image changed during staging deploy. Blocking approval."
+            exit 1
+          fi
+
+          if [ -n "$BEFORE_APP_HASH" ] && [ -n "$AFTER_APP_HASH" ] && [ "$BEFORE_APP_HASH" != "$AFTER_APP_HASH" ]; then
+            echo "Production public HTML changed during staging deploy before approval."
+            echo "This usually means app.nhibuaa.space is routed to staging or another shared frontend path."
             exit 1
           fi
 
