@@ -80,7 +80,7 @@ function App() {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-slate-800 tracking-tight">
-              Team Management 123
+              Team Management 1234
             </h1>
             <p className="text-slate-500 mt-1">
               Manage your development team efficiently
