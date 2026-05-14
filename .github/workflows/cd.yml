@@ -22,6 +22,10 @@ on:
           - staging
           - production
         default: staging
+      production_confirm:
+        description: "Type DEPLOY_PRODUCTION to allow production deployment."
+        required: false
+        default: "no"
 
 concurrency:
   group: cd-${{ github.ref }}
@@ -40,6 +44,7 @@ jobs:
     outputs:
       image_tag: ${{ steps.resolve-tag.outputs.tag }}
       should_deploy: ${{ steps.resolve-tag.outputs.should_deploy }}
+      target_environment: ${{ steps.resolve-tag.outputs.target_environment }}
 
     steps:
       - name: "Resolve image tag"
@@ -47,8 +52,10 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             TAG="${{ inputs.image_tag }}"
+            TARGET_ENVIRONMENT="${{ inputs.environment }}"
           else
             TAG="${{ github.sha }}"
+            TARGET_ENVIRONMENT="staging"
           fi
 
           if [ -z "$TAG" ]; then
@@ -56,9 +63,16 @@ jobs:
             exit 1
           fi
 
+          if [ "$TARGET_ENVIRONMENT" != "staging" ] && [ "$TARGET_ENVIRONMENT" != "production" ]; then
+            echo "Invalid target environment: $TARGET_ENVIRONMENT"
+            exit 1
+          fi
+
           echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "target_environment=$TARGET_ENVIRONMENT" >> $GITHUB_OUTPUT
           echo "should_deploy=true" >> $GITHUB_OUTPUT
           echo "Resolved image tag: $TAG"
+          echo "Target environment: $TARGET_ENVIRONMENT"
 
       - name: "Log deployment intent"
         run: |
@@ -67,6 +81,7 @@ jobs:
           echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Image Tag | \`${{ steps.resolve-tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Target Environment | \`${{ steps.resolve-tag.outputs.target_environment }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Triggered by | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Trigger | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
 
@@ -74,7 +89,7 @@ jobs:
     name: "Deploy -> Staging"
     runs-on: ubuntu-latest
     needs: check-ci-status
-    if: needs.check-ci-status.outputs.should_deploy == 'true'
+    if: needs.check-ci-status.outputs.should_deploy == 'true' && (needs.check-ci-status.outputs.target_environment == 'staging' || needs.check-ci-status.outputs.target_environment == 'production')
     environment:
       name: staging
       url: https://staging.nhibuaa.space
@@ -106,6 +121,18 @@ jobs:
 
           kubectl cluster-info
           kubectl get nodes
+
+      - name: "Snapshot production state before staging deploy"
+        id: production-before-staging
+        if: needs.check-ci-status.outputs.target_environment == 'staging'
+        run: |
+          FRONTEND_IMAGE=$(kubectl get deployment frontend -n production -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
+          BACKEND_IMAGE=$(kubectl get deployment backend -n production -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
+
+          echo "frontend_image=$FRONTEND_IMAGE" >> $GITHUB_OUTPUT
+          echo "backend_image=$BACKEND_IMAGE" >> $GITHUB_OUTPUT
+          echo "Production frontend before staging: ${FRONTEND_IMAGE:-<missing>}"
+          echo "Production backend before staging: ${BACKEND_IMAGE:-<missing>}"
 
       - name: "Resolve ingress class (staging)"
         run: |
@@ -288,6 +315,24 @@ jobs:
 
           echo "Staging health check passed (HTTP $HTTP_STATUS)"
 
+      - name: "Verify production was not changed by staging deploy"
+        if: needs.check-ci-status.outputs.target_environment == 'staging'
+        run: |
+          BEFORE_FRONTEND="${{ steps.production-before-staging.outputs.frontend_image }}"
+          BEFORE_BACKEND="${{ steps.production-before-staging.outputs.backend_image }}"
+          AFTER_FRONTEND=$(kubectl get deployment frontend -n production -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
+          AFTER_BACKEND=$(kubectl get deployment backend -n production -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
+
+          echo "Production frontend before: ${BEFORE_FRONTEND:-<missing>}"
+          echo "Production frontend after:  ${AFTER_FRONTEND:-<missing>}"
+          echo "Production backend before:  ${BEFORE_BACKEND:-<missing>}"
+          echo "Production backend after:   ${AFTER_BACKEND:-<missing>}"
+
+          if [ "$BEFORE_FRONTEND" != "$AFTER_FRONTEND" ] || [ "$BEFORE_BACKEND" != "$AFTER_BACKEND" ]; then
+            echo "Production changed during a staging-only deployment. Blocking the pipeline."
+            exit 1
+          fi
+
       - name: "Auto rollback - Staging (on failure)"
         if: failure()
         run: |
@@ -319,8 +364,10 @@ jobs:
   await-approval:
     name: "Await Manual Approval for Production"
     runs-on: ubuntu-latest
-    needs: deploy-staging
-    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'production'
+    needs:
+      - check-ci-status
+      - deploy-staging
+    if: needs.check-ci-status.outputs.target_environment == 'production' && inputs.production_confirm == 'DEPLOY_PRODUCTION'
     environment:
       name: production-approval
 
@@ -349,7 +396,7 @@ jobs:
     needs:
       - check-ci-status
       - await-approval
-    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'production'
+    if: needs.check-ci-status.outputs.target_environment == 'production' && inputs.production_confirm == 'DEPLOY_PRODUCTION'
     environment:
       name: production
       url: https://app.nhibuaa.space
